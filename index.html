@@ -942,10 +942,22 @@ async function generateListPDF(histIdx){
         setDraw('#f2d6e4');pdf.rect(mx,curY,memberColW,rowH);
         const dayChores=memberDays[mi][d]||[];
         let ty=curY+1.5;
+        const cbSize=4;     // チェックボックスサイズ
+        const cbPad=1.8;    // セル左端からの余白
+        const textOff=cbPad+cbSize+1.5; // テキスト開始X
         for(const c of dayChores){
+          const tagItemH=itemH-1.5;
           setFillAlpha(mem.color,0.18);
-          pdf.roundedRect(mx+1.5,ty,memberColW-3,itemH-1.5,1,1,'F');
-          await jpText(`${c.icon||'✨'}${c.name}`,mx+3,ty+0.5,9,mem.color,'left',memberColW-5);
+          pdf.roundedRect(mx+1.5,ty,memberColW-3,tagItemH,1,1,'F');
+          // チェックボックス（塗り潰しエリア内・縦中央）
+          const cbY=ty+(tagItemH-cbSize)/2;
+          setFill('#ffffff');
+          pdf.setLineWidth(0.5);
+          setDraw('#b0909a');
+          pdf.roundedRect(mx+1.5+cbPad,cbY,cbSize,cbSize,0.8,0.8,'FD');
+          // 家事名（チェックボックスの右・縦中央）
+          const textY=ty+(tagItemH-10*0.35)/2;
+          await jpText(`${c.icon||'✨'}${c.name}`,mx+1.5+textOff,textY,10,mem.color,'left',memberColW-textOff-4);
           ty+=itemH;
         }
       }
@@ -1054,11 +1066,14 @@ async function generatePDF(histIdx){
     for(let r=0;r<=rows;r++)pdf.line(M,y+r*rowH,M+CW,y+r*rowH);
     for(let c=0;c<=7;c++)pdf.line(M+c*cellW,y,M+c*cellW,y+rows*rowH);
 
-    // タグサイズをrowHに応じて自動計算（A4に収まる範囲で最大化）
-    const dayNumH=Math.min(rowH*0.28,9);  // 日付数字エリア高さ
-    const tagH=Math.min((rowH-dayNumH)/5.5, 6); // 1タグ高さ（5件入る前提）
-    const dayNumSize=Math.min(rowH*0.32,12);
-    const tagFontSize=Math.min(tagH*1.2,8.5);
+    // タグサイズをrowHに応じて自動計算（A4に収まる範囲で最大化・上下中央揃え）
+    const dayNumH=Math.min(rowH*0.25,8);   // 日付数字エリア高さ
+    const maxTags=5;                         // 最大表示件数
+    const tagH=(rowH-dayNumH)/maxTags;       // 1タグ高さ（余白なし・ピッタリ割り付け）
+    const dayNumSize=Math.min(rowH*0.30,11);
+    // フォントサイズ：タグ高さの65%を上限、最低7pt
+    const tagFontSize=Math.max(7, Math.min(tagH*0.65, 10));
+    const tagPad=0.4; // タグの上下パディング
 
     // イベントマップ
     const evMap={};pdfResult.forEach(r=>{if(!evMap[r.date])evMap[r.date]=[];evMap[r.date].push(r);});
@@ -1070,16 +1085,18 @@ async function generatePDF(histIdx){
       const isToday=(py===today.getFullYear()&&pm===today.getMonth()+1&&d===today.getDate());
       if(isToday){setFillAlpha('#e8789a',0.08);pdf.rect(cx+0.3,cy+0.3,cellW-0.6,rowH-0.6,'F');}
       const dayColor=isToday?'#e8789a':dow===0?'#e05070':dow===6?'#5aadd4':'#9a7d8e';
-      // 日付数字（縦中央気味に）
+      // 日付数字（上端から）
       await jpText(String(d),cx+1.5,cy+1,dayNumSize,dayColor);
       const evs=(evMap[d]||[]).sort((a,b)=>a.choreIdx-b.choreIdx);
       let ty=cy+dayNumH;
       for(const slot of evs){
-        if(ty+tagH>cy+rowH-0.3)break; // はみ出さない
+        if(ty+tagH>cy+rowH+0.5)break; // はみ出さない
         const chore=pdfChores[slot.choreIdx];const mem=pdfMembers[slot.memberIdx];if(!chore||!mem)continue;
         setFillAlpha(mem.color,0.18);
-        pdf.roundedRect(cx+0.5,ty,cellW-1,tagH-0.3,1,1,'F');
-        await jpText(`${chore.icon||'✨'}${chore.name}`,cx+1.5,ty+(tagH-tagFontSize*0.35)/2,tagFontSize,mem.color);
+        pdf.roundedRect(cx+0.5,ty+tagPad,cellW-1,tagH-tagPad*2,1,1,'F');
+        // テキストをタグ内で上下中央揃え
+        const textY=ty+tagPad+(tagH-tagPad*2-tagFontSize*0.35)/2;
+        await jpText(`${chore.icon||'✨'}${chore.name}`,cx+1.8,textY,tagFontSize,mem.color);
         ty+=tagH;
       }
     }
