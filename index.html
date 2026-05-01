@@ -451,36 +451,53 @@ function assign(){
   }else{lastResult=result;renderCalendar();}
 }
 
-/* ===== CORE LOGIC（修正版：家事ごとに交互分配）=====
-  各家事の出現日リストを作り、交互に2人へ振り分ける。
-  これにより同じ家事は必ず月内で均等（差1以内）になる。
+/* ===== CORE LOGIC =====
+  日内均等を最優先、月間均等を次点で担保する。
+  全スロットを日付順に並べ、同じ日のスロットをまとめて処理。
+  スコア = dayLoad[i]*10000 + totalLoad[i]
+  → 今日の担当数が少ない人を最優先で選ぶ（日内均等）
+  → 同点なら月間累計が少ない人を選ぶ（月間均等）
 */
 function generateAssignment(chores,members,firstDay,lastDate,ud){
   const n=members.length;
-  const result=[];
 
+  // 全スロット生成（日付・家事インデックス）
+  const allSlots=[];
   chores.forEach((chore,ci)=>{
-    const dates=pickDatesForChore(chore,firstDay,lastDate,ud);
-    // この家事の日付を2人に交互に振り分け（月間累計で均等になるよう）
-    // まずシャッフルしてランダム性を持たせる
-    const shuffled=[...dates].sort(()=>Math.random()-.5);
-    // 個人不可日を考慮しながら割り当て
-    const memberLoad=Array(n).fill(0);
-    shuffled.forEach(date=>{
-      // 不可でないメンバーの中で最も担当数が少ない人を選ぶ
-      let bestIdx=-1,bestLoad=Infinity;
+    pickDatesForChore(chore,firstDay,lastDate,ud).forEach(d=>allSlots.push({date:d,choreIdx:ci}));
+  });
+
+  // 日付でグループ化し、各日の中でシャッフル（ランダム性）
+  const byDate={};
+  allSlots.forEach(s=>{if(!byDate[s.date])byDate[s.date]=[];byDate[s.date].push(s);});
+
+  const result=[];
+  const totalLoad=Array(n).fill(0); // 月間累計
+
+  Object.keys(byDate).map(Number).sort((a,b)=>a-b).forEach(d=>{
+    const slots=[...byDate[d]].sort(()=>Math.random()-.5);
+    const dayLoad=Array(n).fill(0); // 今日の担当数（リセット）
+
+    slots.forEach(slot=>{
+      // スコア最小のメンバーを選ぶ（日内均等を最優先）
+      let bestIdx=-1,bestScore=Infinity;
       for(let i=0;i<n;i++){
-        if((ud[date]||[]).includes(i))continue;// この日この人は不可
-        if(memberLoad[i]<bestLoad){bestLoad=memberLoad[i];bestIdx=i;}
+        if((ud[d]||[]).includes(i))continue; // この日は不可
+        const score=dayLoad[i]*10000+totalLoad[i];
+        if(score<bestScore){bestScore=score;bestIdx=i;}
       }
-      if(bestIdx===-1){// 全員不可なら担当数最小の人
-        for(let i=0;i<n;i++){if(memberLoad[i]<bestLoad){bestLoad=memberLoad[i];bestIdx=i;}}
+      if(bestIdx===-1){ // 全員不可なら制限なしで選ぶ
+        for(let i=0;i<n;i++){
+          const score=dayLoad[i]*10000+totalLoad[i];
+          if(score<bestScore){bestScore=score;bestIdx=i;}
+        }
       }
-      result.push({date,choreIdx:ci,memberIdx:bestIdx});
-      memberLoad[bestIdx]++;
+      result.push({...slot,memberIdx:bestIdx});
+      dayLoad[bestIdx]++;
+      totalLoad[bestIdx]++;
     });
   });
-  return result.sort((a,b)=>a.date-b.date||a.choreIdx-b.choreIdx);
+  return result;
 }
 
 function pickDatesForChore(chore,firstDay,lastDate,ud){
@@ -655,37 +672,37 @@ async function generatePDF(histIdx){
     };
 
     // ===== ヘッダー =====
-    setFill('#fde8f0');pdf.setLineWidth(0);pdf.rect(M,y,CW,9,'F');
-    await jpText(`🏠 おうち分担　${pdfLabel}`,M+3,y+1.5,13,'#e8789a');
-    // 凡例
-    let lx=M+CW-pdfMembers.length*44;
+    setFill('#fde8f0');pdf.setLineWidth(0);pdf.rect(M,y,CW,12,'F');
+    await jpText(`🏠 おうち分担　${pdfLabel}`,M+4,y+2,16,'#e8789a');
+    // 凡例（右側）
+    let lx=M+CW-pdfMembers.length*56;
     for(const mem of pdfMembers){
-      setFill(mem.color);pdf.circle(lx+3,y+4.5,2.5,'F');
-      await jpText(`${mem.avatar} ${mem.name}`,lx+7,y+1.5,9,mem.color);
-      lx+=44;
+      setFill(mem.color);pdf.circle(lx+3,y+6,3,'F');
+      await jpText(`${mem.avatar} ${mem.name}`,lx+8,y+2,11,mem.color);
+      lx+=56;
     }
-    y+=12;
+    y+=15;
 
     // ===== 家事回数サマリー =====
     const counts=pdfChores.map(()=>Array(pdfMembers.length).fill(0));
     pdfResult.forEach(r=>{if(counts[r.choreIdx])counts[r.choreIdx][r.memberIdx]++;});
-    const cols=4,summaryRowH=7,summaryRows=Math.ceil(pdfChores.length/cols);
-    setFill('#fef0f5');pdf.rect(M,y,CW,summaryRowH*summaryRows+5,'F');
-    await jpText('📊 家事別担当回数',M+2,y+1,8,'#9a7d8e');y+=5;
+    const cols=4,summaryRowH=9,summaryRows=Math.ceil(pdfChores.length/cols);
+    setFill('#fef0f5');pdf.rect(M,y,CW,summaryRowH*summaryRows+7,'F');
+    await jpText('📊 家事別担当回数',M+2,y+1.5,9,'#9a7d8e');y+=7;
     const colW=CW/cols;
     for(let ci=0;ci<pdfChores.length;ci++){
       const c=pdfChores[ci];const col=ci%cols;const rowOff=Math.floor(ci/cols);
       const cx=M+col*colW,cy=y+rowOff*summaryRowH;
-      await jpText(`${c.icon||'✨'}${c.name}`,cx+1,cy,6.5,'#3d2c38');
-      let bx=cx+28;
+      await jpText(`${c.icon||'✨'}${c.name}`,cx+1,cy+0.5,8,'#3d2c38');
+      let bx=cx+colW*0.52;
       for(let mi=0;mi<pdfMembers.length;mi++){
         const mem=pdfMembers[mi];
-        setFillAlpha(mem.color,0.2);pdf.roundedRect(bx,cy,17,5,1,1,'F');
-        await jpText(`${mem.avatar}${counts[ci][mi]}`,bx+1,cy+0.5,6,mem.color);
-        bx+=19;
+        setFillAlpha(mem.color,0.2);pdf.roundedRect(bx,cy,20,6.5,1.2,1.2,'F');
+        await jpText(`${mem.avatar}${counts[ci][mi]}回`,bx+1,cy+0.8,7,mem.color);
+        bx+=22;
       }
     }
-    y+=summaryRowH*summaryRows+6;
+    y+=summaryRowH*summaryRows+8;
 
     // ===== カレンダー =====
     const firstDay=new Date(py,pm-1,1).getDay(),lastDate=new Date(py,pm,0).getDate();
@@ -695,9 +712,9 @@ async function generatePDF(histIdx){
 
     // 曜日ヘッダー
     const DAY_COLORS=['#e05070','#3d2c38','#3d2c38','#3d2c38','#3d2c38','#3d2c38','#5aadd4'];
-    setFill('#fef0f5');pdf.rect(M,y,CW,6,'F');
-    for(let i=0;i<7;i++)await jpText(DAYS_JA[i],M+i*cellW+cellW/2,y+0.5,8,DAY_COLORS[i],'center');
-    y+=6;
+    setFill('#fef0f5');pdf.rect(M,y,CW,8,'F');
+    for(let i=0;i<7;i++)await jpText(DAYS_JA[i],M+i*cellW+cellW/2,y+1,10,DAY_COLORS[i],'center');
+    y+=8;
 
     // グリッド線
     setDraw('#f2d6e4');pdf.setLineWidth(0.3);
@@ -707,6 +724,12 @@ async function generatePDF(histIdx){
     // イベントマップ
     const evMap={};pdfResult.forEach(r=>{if(!evMap[r.date])evMap[r.date]=[];evMap[r.date].push(r);});
 
+    // 1セルあたりのタグの高さ（文字サイズに合わせて調整）
+    const tagH=rowH>30?5.5:rowH>22?5:4.5;
+    const dayNumSize=rowH>30?10:rowH>22?9:8;
+    const tagFontSize=rowH>30?7.5:rowH>22?7:6.5;
+    const dayNumH=rowH>30?8:rowH>22?7:6;
+
     for(let d=1;d<=lastDate;d++){
       const ci2=(firstDay+d-1)%7;const ri=(firstDay+d-1)/7|0;
       const cx=M+ci2*cellW,cy=y+ri*rowH;
@@ -714,16 +737,16 @@ async function generatePDF(histIdx){
       const isToday=(py===today.getFullYear()&&pm===today.getMonth()+1&&d===today.getDate());
       if(isToday){setFill('#fde8f0');pdf.rect(cx+0.3,cy+0.3,cellW-0.6,rowH-0.6,'F');}
       const dayColor=isToday?'#e8789a':dow===0?'#e05070':dow===6?'#5aadd4':'#9a7d8e';
-      await jpText(String(d),cx+1,cy+0.5,7,dayColor);
+      await jpText(String(d),cx+1.5,cy+0.8,dayNumSize,dayColor);
       const evs=(evMap[d]||[]).sort((a,b)=>a.choreIdx-b.choreIdx);
-      let ty=cy+6;
+      let ty=cy+dayNumH;
       for(const slot of evs){
-        if(ty+4>cy+rowH-0.5)break;
+        if(ty+tagH>cy+rowH-0.5)break;
         const chore=pdfChores[slot.choreIdx];const mem=pdfMembers[slot.memberIdx];if(!chore||!mem)continue;
-        setFillAlpha(mem.color,0.18);// ← 修正: hexAlpha文字列ではなくsetFillAlpha使用
-        pdf.roundedRect(cx+0.5,ty,cellW-1,4,0.8,0.8,'F');
-        await jpText(`${chore.icon||'✨'}${chore.name}`,cx+1.5,ty+0.3,5.5,mem.color);
-        ty+=4.5;
+        setFillAlpha(mem.color,0.18);
+        pdf.roundedRect(cx+0.5,ty,cellW-1,tagH-0.5,1,1,'F');
+        await jpText(`${chore.icon||'✨'}${chore.name}`,cx+1.5,ty+0.4,tagFontSize,mem.color);
+        ty+=tagH;
       }
     }
     pdf.save(`おうち分担_${pdfLabel}.pdf`);showToast('✅ PDF生成完了！');
