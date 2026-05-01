@@ -671,51 +671,77 @@ function renderCalendar(){
   setTimeout(()=>area.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
 }
 
-/* ===== リスト表示（スマホ用）===== */
+/* ===== リスト表示（スマホ用）- テーブル形式：日付固定・メンバー横並び ===== */
 function buildListView(result,usedChores,usedMembers,monthKey,ud,container){
   container.innerHTML='';
   const[y,m]=monthKey.split('-').map(Number);
   const firstDay=new Date(y,m-1,1).getDay(),lastDate=new Date(y,m,0).getDate();
   const today=new Date();
 
-  // メンバーごとの日付→家事マップ
   const memberDays=usedMembers.map(()=>({}));
   result.forEach(r=>{
     if(!memberDays[r.memberIdx][r.date])memberDays[r.memberIdx][r.date]=[];
     const c=usedChores[r.choreIdx];if(c)memberDays[r.memberIdx][r.date].push(c);
   });
 
-  const grid=document.createElement('div');grid.className='list-members-grid';
-  usedMembers.forEach((mem,mi)=>{
-    const col=document.createElement('div');col.className='list-member-col';
-    col.style.borderColor=mem.color;
-    const hdr=document.createElement('div');hdr.className='list-member-hdr';
-    hdr.style.background=hexAlpha(mem.color,.12);
-    hdr.innerHTML=`<span>${mem.avatar}</span><span style="color:${mem.color}">${esc(mem.name)}</span>`;
-    col.appendChild(hdr);
+  const wrap=document.createElement('div');
+  wrap.style.cssText='overflow-x:auto;-webkit-overflow-scrolling:touch';
+  const table=document.createElement('table');
+  table.style.cssText='width:100%;border-collapse:collapse;font-size:12px;min-width:280px';
 
-    for(let d=1;d<=lastDate;d++){
-      const dayChores=memberDays[mi][d];
-      if(!dayChores||!dayChores.length)continue;
-      const dow=(firstDay+d-1)%7;
-      const isToday=(y===today.getFullYear()&&m===today.getMonth()+1&&d===today.getDate());
-      const row=document.createElement('div');row.className='list-day-row';
-      if(isToday)row.style.background=hexAlpha(mem.color,.06);
-      const numEl=document.createElement('div');
-      numEl.className='list-day-num'+(dow===0?' sun':dow===6?' sat':'');
-      numEl.textContent=d;
-      if(isToday){numEl.style.cssText=`background:${mem.color};color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px`;}
-      const choresEl=document.createElement('div');choresEl.className='list-day-chores';
-      dayChores.forEach(c=>{
-        const item=document.createElement('div');item.className='list-chore-item';
-        item.style.cssText=`background:${hexAlpha(mem.color,.15)};color:${mem.color}`;
-        item.textContent=`${c.icon||'✨'}${c.name}`;choresEl.appendChild(item);
-      });
-      row.appendChild(numEl);row.appendChild(choresEl);col.appendChild(row);
-    }
-    grid.appendChild(col);
+  // ヘッダー行
+  const thead=document.createElement('thead');
+  const hdrRow=document.createElement('tr');
+  const dateTh=document.createElement('th');
+  dateTh.style.cssText='padding:6px 4px;background:var(--s2);border:1px solid var(--border2);font-size:11px;color:var(--muted);width:40px;text-align:center;white-space:nowrap';
+  dateTh.textContent='日付';hdrRow.appendChild(dateTh);
+  usedMembers.forEach(mem=>{
+    const th=document.createElement('th');
+    th.style.cssText=`padding:7px 6px;border:1px solid var(--border2);text-align:center;font-size:12px;font-weight:700;color:${mem.color};background:${hexAlpha(mem.color,.12)}`;
+    th.innerHTML=`${mem.avatar} ${esc(mem.name)}`;hdrRow.appendChild(th);
   });
-  container.appendChild(grid);
+  thead.appendChild(hdrRow);table.appendChild(thead);
+
+  // ボディ：日付ごとの行
+  const tbody=document.createElement('tbody');
+  for(let d=1;d<=lastDate;d++){
+    const hasAny=usedMembers.some((_,mi)=>memberDays[mi][d]&&memberDays[mi][d].length>0);
+    if(!hasAny)continue;
+    const dow=(firstDay+d-1)%7;
+    const isToday=(y===today.getFullYear()&&m===today.getMonth()+1&&d===today.getDate());
+    const isSun=dow===0,isSat=dow===6;
+    const tr=document.createElement('tr');
+    if(isToday)tr.style.background=hexAlpha('#e8789a',.04);
+
+    // 日付セル（固定）
+    const dateTd=document.createElement('td');
+    dateTd.style.cssText='padding:5px 3px;border:1px solid var(--border2);text-align:center;vertical-align:middle;white-space:nowrap';
+    const dateWrap=document.createElement('div');
+    dateWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:1px';
+    const numEl=document.createElement('div');
+    const numColor=isToday?'#fff':isSun?'#e05070':isSat?'#5aadd4':'var(--text)';
+    numEl.style.cssText=`font-size:13px;font-weight:700;color:${numColor};line-height:1;${isToday?'background:#e8789a;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center':''}`;
+    numEl.textContent=d;
+    const dowEl=document.createElement('div');
+    dowEl.style.cssText=`font-size:9px;font-weight:700;color:${isSun?'#e05070':isSat?'#5aadd4':'var(--dim)'}`;
+    dowEl.textContent=DAYS_JA[dow];
+    dateWrap.appendChild(numEl);dateWrap.appendChild(dowEl);
+    dateTd.appendChild(dateWrap);tr.appendChild(dateTd);
+
+    // メンバーセル（同じ行高さで揃う）
+    usedMembers.forEach((mem,mi)=>{
+      const td=document.createElement('td');
+      td.style.cssText='padding:4px 4px;border:1px solid var(--border2);vertical-align:top';
+      (memberDays[mi][d]||[]).forEach(c=>{
+        const chip=document.createElement('div');
+        chip.style.cssText=`background:${hexAlpha(mem.color,.15)};color:${mem.color};border-radius:4px;padding:3px 5px;margin-bottom:2px;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+        chip.textContent=`${c.icon||'✨'}${c.name}`;td.appendChild(chip);
+      });
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);wrap.appendChild(table);container.appendChild(wrap);
 }
 
 /* ===== PDF モーダル ===== */
@@ -733,7 +759,7 @@ function selectPdfType(type){
   else generateListPDF(pdfModalHistIdx);
 }
 
-/* ===== リストPDF ===== */
+/* ===== リストPDF - テーブル形式：日付左列・メンバー横並び・行高さ完全揃え ===== */
 async function generateListPDF(histIdx){
   let pdfResult,pdfChores,pdfMembers,pdfKey,pdfUd;
   if(histIdx!=null){
@@ -754,22 +780,26 @@ async function generateListPDF(histIdx){
   await new Promise(r=>setTimeout(r,60));
   try{
     const{jsPDF}=window.jspdf;
+    // A4縦
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const W=210,H=297,M=12,CW=W-M*2;
-    let y=M;
+    const W=210,H=297,M=10,CW=W-M*2;
+    let curY=M;
+
     const hexRGB=(hex)=>{const h=(hex||'#888888').replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
     const setFill=(hex)=>{const[r,g,b]=hexRGB(hex);pdf.setFillColor(r,g,b);};
     const setDraw=(hex)=>{const[r,g,b]=hexRGB(hex);pdf.setDrawColor(r,g,b);};
     const setFillAlpha=(hex,a)=>{const[r,g,b]=hexRGB(hex);pdf.setFillColor(Math.round(r*a+255*(1-a)),Math.round(g*a+255*(1-a)),Math.round(b*a+255*(1-a)));};
-    const jpText=async(text,x,fy,size=11,color='#3d2c38',align='left')=>{
+
+    const jpText=async(text,x,fy,size=10,color='#3d2c38',align='left',maxW=null)=>{
       if(!text)return;
       const canvas=document.createElement('canvas');
       const scale=3,fs=size*scale;
-      canvas.height=Math.ceil(fs*1.5);
+      canvas.height=Math.ceil(fs*1.6);
       const ctx=canvas.getContext('2d');
       ctx.font=`700 ${fs}px "Noto Sans JP",sans-serif`;
       const tw=ctx.measureText(String(text)).width;
-      canvas.width=Math.min(Math.ceil(tw)+10,CW*3.78*scale);
+      const maxPx=maxW?maxW*3.78*scale:CW*3.78*scale;
+      canvas.width=Math.min(Math.ceil(tw)+8,maxPx);
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.font=`700 ${fs}px "Noto Sans JP",sans-serif`;
       const[r,g,b]=hexRGB(color);ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.textBaseline='top';
@@ -782,10 +812,19 @@ async function generateListPDF(histIdx){
       pdf.addImage(canvas.toDataURL('image/png'),'PNG',px,fy,pW,pH);
     };
 
-    // ヘッダー
-    setFill('#fde8f0');pdf.rect(M,y,CW,13,'F');
-    await jpText(`🏠 おうち分担　${pdfLabel}　担当リスト`,M+4,y+2.5,14,'#e8789a');
-    y+=17;
+    // ===== ヘッダー =====
+    setFill('#fde8f0');pdf.rect(M,curY,CW,12,'F');
+    await jpText(`🏠 おうち分担　${pdfLabel}　担当リスト`,M+3,curY+2,13,'#e8789a');
+    curY+=15;
+
+    // ===== テーブルレイアウト計算 =====
+    const n=pdfMembers.length;
+    const dateColW=18;           // 日付列幅
+    const memberColW=(CW-dateColW-1)/n; // メンバー列幅（均等）
+    const itemH=7;               // 家事1件の行高さ
+    const minRowH=8;             // 最低行高さ
+    const dateX=M;
+    const memberXs=pdfMembers.map((_,i)=>M+dateColW+1+i*memberColW);
 
     // メンバーごとの日付→家事マップ
     const memberDays=pdfMembers.map(()=>({}));
@@ -794,53 +833,74 @@ async function generateListPDF(histIdx){
       const c=pdfChores[r.choreIdx];if(c)memberDays[r.memberIdx][r.date].push(c);
     });
 
-    // 2列でメンバーを並べる
-    const colCount=Math.min(pdfMembers.length,2);
-    const colW2=(CW-(colCount-1)*6)/colCount;
-    const colXs=pdfMembers.map((_,i)=>M+i%colCount*(colW2+6));
-
-    // 各メンバーの行数を先に計算して最大高さを把握
-    const rowH=8; // 1日エントリの高さ
+    // ===== ヘッダー行（メンバー名）=====
     const hdrH=10;
-    const itemH=6.5; // 家事1件の高さ
+    // 日付列ヘッダー背景
+    setFill('#fef0f5');pdf.rect(dateX,curY,dateColW,hdrH,'F');
+    setDraw('#f2d6e4');pdf.setLineWidth(0.3);pdf.rect(dateX,curY,dateColW,hdrH);
+    await jpText('日付',dateX+1,curY+2.5,7,'#9a7d8e','center');
+    // メンバー列ヘッダー
+    for(let mi=0;mi<n;mi++){
+      const mem=pdfMembers[mi];const mx=memberXs[mi];
+      setFillAlpha(mem.color,0.15);pdf.rect(mx,curY,memberColW,hdrH,'F');
+      setDraw('#f2d6e4');pdf.rect(mx,curY,memberColW,hdrH);
+      await jpText(`${mem.avatar} ${mem.name}`,mx+memberColW/2,curY+2,10,mem.color,'center',memberColW);
+    }
+    curY+=hdrH;
 
-    for(let mi=0;mi<pdfMembers.length;mi++){
-      const mem=pdfMembers[mi];
-      const cx=colXs[mi];
+    // ===== 日付ごとの行 =====
+    for(let d=1;d<=lastDate;d++){
+      const hasAny=pdfMembers.some((_,mi)=>memberDays[mi][d]&&memberDays[mi][d].length>0);
+      if(!hasAny)continue;
 
-      // ページが足りなければ改ページ
-      if(mi>0&&mi%colCount===0)y+=4;
+      // この行の高さ = 最多の家事件数 × itemH、最低minRowH
+      const maxChores=Math.max(...pdfMembers.map((_,mi)=>(memberDays[mi][d]||[]).length));
+      const rowH=Math.max(minRowH,maxChores*itemH);
 
-      // メンバーヘッダー
-      setFill(mem.color);pdf.roundedRect(cx,y,colW2,hdrH,3,3,'F');
-      await jpText(`${mem.avatar} ${mem.name}`,cx+colW2/2,y+2,12,'#ffffff','center');
-      let ry=y+hdrH+2;
-
-      for(let d=1;d<=lastDate;d++){
-        const dayChores=memberDays[mi][d];if(!dayChores||!dayChores.length)continue;
-        const dow=(firstDay+d-1)%7;
-        const neededH=itemH*dayChores.length+rowH;
-        // ページオーバー
-        if(ry+neededH>H-M){
-          pdf.addPage();ry=M;
-          setFill(mem.color);pdf.roundedRect(cx,ry,colW2,8,3,3,'F');
-          await jpText(`${mem.avatar} ${mem.name}（続き）`,cx+colW2/2,ry+1.5,10,'#ffffff','center');
-          ry+=10;
+      // ページオーバーチェック
+      if(curY+rowH>H-M){
+        pdf.addPage();curY=M;
+        // ページ先頭にヘッダー再描画
+        setFill('#fde8f0');pdf.rect(M,curY,CW,8,'F');
+        await jpText(`${pdfLabel} 担当リスト（続き）`,M+3,curY+1.5,10,'#e8789a');
+        curY+=10;
+        // メンバーヘッダー再描画
+        setFill('#fef0f5');pdf.rect(dateX,curY,dateColW,hdrH,'F');
+        setDraw('#f2d6e4');pdf.rect(dateX,curY,dateColW,hdrH);
+        for(let mi=0;mi<n;mi++){
+          const mem=pdfMembers[mi];const mx=memberXs[mi];
+          setFillAlpha(mem.color,0.15);pdf.rect(mx,curY,memberColW,hdrH,'F');
+          setDraw('#f2d6e4');pdf.rect(mx,curY,memberColW,hdrH);
+          await jpText(`${mem.avatar} ${mem.name}`,mx+memberColW/2,curY+2,10,mem.color,'center',memberColW);
         }
-        // 日付行
-        const dayLabel=`${d}日（${DAYS_JA[dow]}）`;
-        const dayColor=dow===0?'#e05070':dow===6?'#5aadd4':'#9a7d8e';
-        setFillAlpha(mem.color,0.08);pdf.rect(cx,ry,colW2,rowH,'F');
-        await jpText(dayLabel,cx+3,ry+1.5,10,dayColor);
-        ry+=rowH;
-        // 家事アイテム
-        for(const c of dayChores){
-          setFillAlpha(mem.color,0.18);pdf.roundedRect(cx+4,ry,colW2-8,itemH,1.5,1.5,'F');
-          await jpText(`${c.icon||'✨'}${c.name}`,cx+7,ry+0.8,10,mem.color);
-          ry+=itemH+1;
-        }
-        ry+=2;
+        curY+=hdrH;
       }
+
+      const dow=(firstDay+d-1)%7;
+      const isSun=dow===0,isSat=dow===6;
+      const dayColor=isSun?'#e05070':isSat?'#5aadd4':'#3d2c38';
+
+      // 日付セル
+      setFill('#fef0f5');pdf.rect(dateX,curY,dateColW,rowH,'F');
+      setDraw('#f2d6e4');pdf.setLineWidth(0.3);pdf.rect(dateX,curY,dateColW,rowH);
+      await jpText(String(d),dateX+dateColW/2,curY+1.5,11,dayColor,'center');
+      await jpText(DAYS_JA[dow],dateX+dateColW/2,curY+7,7,dayColor,'center');
+
+      // メンバーセル（同じY・同じ高さで揃う）
+      for(let mi=0;mi<n;mi++){
+        const mem=pdfMembers[mi];const mx=memberXs[mi];
+        setFill('#ffffff');pdf.rect(mx,curY,memberColW,rowH,'F');
+        setDraw('#f2d6e4');pdf.rect(mx,curY,memberColW,rowH);
+        const dayChores=memberDays[mi][d]||[];
+        let ty=curY+1.5;
+        for(const c of dayChores){
+          setFillAlpha(mem.color,0.18);
+          pdf.roundedRect(mx+1.5,ty,memberColW-3,itemH-1.5,1,1,'F');
+          await jpText(`${c.icon||'✨'}${c.name}`,mx+3,ty+0.5,9,mem.color,'left',memberColW-5);
+          ty+=itemH;
+        }
+      }
+      curY+=rowH;
     }
 
     pdf.save(`おうち分担_${pdfLabel}_リスト.pdf`);showToast('✅ PDF生成完了！');
