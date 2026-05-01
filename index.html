@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#e8789a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="おうち分担">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>おうち分担</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fdf6f9;--surface:#fff;--surface2:#fef0f5;--border:#f2d6e4;--border2:#f8e4ee;
+  --pink:#e8789a;--pink-l:#fde8f0;--pink-b:#f5b8ce;
+  --mint:#5bab8e;--mint-l:#e4f7f0;--mint-b:#a8dfc9;
+  --lav:#9b7fd4;--lav-l:#f0eafc;--lav-b:#cdb8ef;
+  --sky:#5aadd4;--sky-l:#e4f3fb;--sky-b:#a8d4ee;
+  --pch:#e8956a;--pch-l:#fdf0e8;--pch-b:#f5c8a8;
+  --text:#3d2c38;--muted:#9a7d8e;--dim:#c4a8b8;
+  --r:16px;--rs:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:100px}
+
+/* HEADER */
+.app-header{background:#fff;border-bottom:1.5px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:300;box-shadow:0 2px 12px rgba(232,120,154,.10)}
+.app-title{font-size:17px;font-weight:700}
+.app-title span{color:var(--pink)}
+
+/* TAB BAR */
+.tab-bar{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-bottom:1.5px solid var(--border);position:sticky;top:53px;z-index:290;box-shadow:0 1px 6px rgba(232,120,154,.06)}
+.tab-btn{font-family:'Noto Sans JP',sans-serif;font-size:11px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-1.5px;padding:9px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .2s}
+.tab-btn .ti{font-size:18px}
+.tab-btn.active{color:var(--pink);border-bottom-color:var(--pink);font-weight:700}
+
+/* PAGE */
+.page{display:none;padding:14px;max-width:680px;margin:0 auto}
+.page.active{display:block}
+
+/* CARD */
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(232,120,154,.06)}
+.card-hdr{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* MONTH */
+.month-select{font-family:'Noto Sans JP',sans-serif;font-size:20px;font-weight:700;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--rs);padding:6px 14px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;color:var(--text);transition:border-color .2s}
+.month-select:focus{border-color:var(--pink)}
+
+/* 不可日カレンダー */
+.unavail-section{margin-top:16px}
+.unavail-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.umcal-hdr{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.umcal-hdr span{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding:3px 0}
+.umcal-hdr .sun{color:#e05070}
+.umcal-hdr .sat{color:var(--sky)}
+.umcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.umcal-cell{aspect-ratio:1;border-radius:8px;border:1.5px solid transparent;background:var(--surface2);font-size:11px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;user-select:none;gap:1px}
+.umcal-cell.empty{background:transparent;border-color:transparent;cursor:default}
+.umcal-cell.today{border-color:var(--pink);color:var(--pink)}
+.umcal-cell.sun-cell{color:#e05070}
+.umcal-cell.sat-cell{color:var(--sky)}
+.umcal-cell.has-unavail{background:var(--pink-l)}
+.umcal-cell:not(.empty):hover{border-color:var(--border)}
+.unavail-badges{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;width:100%}
+.unavail-badge{font-size:8px;padding:0 2px;border-radius:3px;font-weight:700;line-height:1.4}
+.ub-0{background:var(--pink-l);color:var(--pink)}
+.ub-1{background:var(--mint-l);color:var(--mint)}
+.ub-2{background:var(--lav-l);color:var(--lav)}
+.ub-3{background:var(--sky-l);color:var(--sky)}
+.ub-4{background:var(--pch-l);color:var(--pch)}
+
+/* ASSIGN BTN */
+.assign-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:linear-gradient(135deg,#f090b0 0%,#e8789a 60%,#d45f88 100%);color:#fff;border:none;border-radius:var(--r);font-family:'Noto Sans JP',sans-serif;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 18px rgba(232,120,154,.38);transition:all .2s}
+.assign-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(232,120,154,.45)}
+.assign-btn:active{transform:scale(.98)}
+
+/* RESULT */
+.result-area{display:none}
+.result-area.visible{display:block}
+.result-month-badge{display:inline-flex;align-items:center;gap:6px;background:var(--pink-l);color:var(--pink);border:1.5px solid var(--pink-b);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;margin-bottom:12px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* CALENDAR OUTPUT */
+.cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cal-table{width:100%;border-collapse:separate;border-spacing:0;min-width:300px}
+.cal-table thead th{font-size:11px;font-weight:700;color:var(--muted);padding:6px 2px;text-align:center;background:var(--surface2);border-bottom:1.5px solid var(--border)}
+.cal-table thead th.sun{color:#e05070}
+.cal-table thead th.sat{color:var(--sky)}
+.cal-table thead th:first-child{border-radius:8px 0 0 0}
+.cal-table thead th:last-child{border-radius:0 8px 0 0}
+.cal-table tbody td{vertical-align:top;border:1px solid var(--border2);padding:0;width:calc(100%/7)}
+.cell-inner{min-height:72px;padding:4px 3px 5px;display:flex;flex-direction:column;gap:2px}
+.cell-day{font-size:11px;font-weight:700;color:var(--muted);line-height:1;margin-bottom:1px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.cell-day.today{background:var(--pink);color:#fff}
+.cell-day.sun{color:#e05070}
+.cell-day.sat{color:var(--sky)}
+td.empty .cell-inner{background:var(--surface2)}
+td.unavail-day .cell-inner{background:#fff5f8}
+.chore-tag{font-size:9px;font-weight:700;border-radius:3px;padding:2px 3px;line-height:1.3;word-break:break-all;display:block}
+.tag-0{background:var(--pink-l);color:var(--pink)}
+.tag-1{background:var(--mint-l);color:var(--mint)}
+.tag-2{background:var(--lav-l);color:var(--lav)}
+.tag-3{background:var(--sky-l);color:var(--sky)}
+.tag-4{background:var(--pch-l);color:var(--pch)}
+.unavail-marker{font-size:8px;color:var(--dim);font-weight:700;text-align:center;line-height:1.2}
+
+/* ACTION */
+.action-row{display:flex;gap:8px;margin-top:12px}
+.action-btn{flex:1;padding:11px 6px;border:1.5px solid var(--border);background:var(--surface);border-radius:var(--rs);font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+.action-btn .ab-icon{font-size:18px}
+.action-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-l)}
+.action-btn:active{transform:scale(.96)}
+
+/* PAGE TITLE */
+.page-title{font-size:18px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+
+/* HISTORY */
+.history-empty{text-align:center;padding:4rem 2rem;color:var(--dim);font-size:14px}
+.history-empty .he-icon{font-size:3rem;margin-bottom:.5rem}
+.history-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;box-shadow:0 2px 8px rgba(232,120,154,.05)}
+.history-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1.5px solid transparent;cursor:pointer;user-select:none;transition:background .15s}
+.history-card-hdr:hover{background:var(--surface2)}
+.history-card.open .history-card-hdr{border-bottom-color:var(--border)}
+.history-month{font-size:15px;font-weight:700}
+.history-meta{font-size:11px;color:var(--muted);margin-top:1px}
+.history-toggle{font-size:12px;color:var(--dim);transition:transform .2s}
+.history-card.open .history-toggle{transform:rotate(180deg)}
+.history-body{display:none;padding:12px 14px}
+.history-card.open .history-body{display:block}
+.history-members-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.history-member-name{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.history-chore-item{font-size:13px;padding:3px 0;display:flex;align-items:center;gap:5px}
+.history-del-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:12px;padding:8px;border:1.5px dashed var(--border);background:none;border-radius:8px;font-family:inherit;font-size:12px;color:var(--dim);cursor:pointer;transition:all .15s}
+.history-del-btn:hover{border-color:#e57878;color:#e57878;background:#fff5f5}
+
+/* ===== SETTINGS ===== */
+.settings-section{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.settings-section-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.member-input-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.member-input{flex:1;min-width:0;font-family:'Noto Sans JP',sans-serif;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--rs);background:var(--surface2);color:var(--text);outline:none;transition:border-color .2s}
+.member-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(232,120,154,.12);background:#fff}
+
+/* 家事行 */
+.chore-settings-row{background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--rs);padding:12px;margin-bottom:8px}
+.chore-row-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.chore-row-icon{font-size:20px;flex-shrink:0}
+.chore-name-input{flex:1;min-width:0;font-family:'Noto Sans JP',sans-serif;font-size:14px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--rs);background:#fff;color:var(--text);outline:none;transition:border-color .2s}
+.chore-name-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(232,120,154,.12)}
+
+/* 頻度タイプボタン */
+.freq-type-row{display:flex;gap:6px;margin-bottom:8px}
+.freq-type-btn{flex:1;padding:7px 4px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;transition:all .15s}
+.freq-type-btn.active{background:var(--pink-l);border-color:var(--pink);color:var(--pink)}
+
+/* 回数チップ */
+.freq-count-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.freq-count-chip{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.freq-count-chip.active{background:var(--pink-l);border-color:var(--pink);color:var(--pink)}
+
+/* 曜日チップ */
+.day-label{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.day-chips-row{display:flex;gap:5px;flex-wrap:wrap}
+.day-chip{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.day-chip.active{background:var(--mint-l);border-color:var(--mint);color:var(--mint)}
+.day-chip.sun-chip.active{background:#fff0f3;border-color:#e05070;color:#e05070}
+.day-chip.sat-chip.active{background:var(--sky-l);border-color:var(--sky);color:var(--sky)}
+
+.remove-btn{flex-shrink:0;width:32px;height:32px;border:1.5px solid var(--border);background:none;border-radius:8px;cursor:pointer;font-size:13px;color:var(--dim);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.remove-btn:hover{border-color:#e57878;color:#e57878;background:#fff5f5}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1.5px dashed var(--border);background:none;border-radius:var(--rs);font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer;margin-top:4px;transition:all .15s}
+.add-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-l)}
+.save-settings-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f090b0 0%,#e8789a 100%);color:#fff;border:none;border-radius:var(--r);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(232,120,154,.30);transition:all .2s}
+.save-settings-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(232,120,154,.40)}
+.save-settings-btn:active{transform:scale(.98)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(61,44,56,.45);z-index:500;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(3px)}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:20px 20px 36px;width:100%;max-width:500px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.2,.64,1)}
+.modal-overlay.show .modal-sheet{transform:translateY(0)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+.modal-member-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.modal-member-chip{padding:8px 16px;border-radius:20px;border:2px solid var(--border);background:var(--surface2);font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.modal-member-chip.sel-0{background:var(--pink-l);border-color:var(--pink);color:var(--pink)}
+.modal-member-chip.sel-1{background:var(--mint-l);border-color:var(--mint);color:var(--mint)}
+.modal-member-chip.sel-2{background:var(--lav-l);border-color:var(--lav);color:var(--lav)}
+.modal-member-chip.sel-3{background:var(--sky-l);border-color:var(--sky);color:var(--sky)}
+.modal-member-chip.sel-4{background:var(--pch-l);border-color:var(--pch);color:var(--pch)}
+.modal-btns{display:flex;gap:8px}
+.modal-btn{flex:1;padding:13px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--surface2);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .15s}
+.modal-btn.primary{background:linear-gradient(135deg,#f090b0,#e8789a);color:#fff;border:none;box-shadow:0 3px 12px rgba(232,120,154,.35)}
+.modal-btn:hover{border-color:var(--pink);color:var(--pink)}
+.modal-btn.primary:hover{transform:translateY(-1px)}
+
+/* CONFIRM */
+.confirm-overlay{position:fixed;inset:0;background:rgba(61,44,56,.45);z-index:600;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(3px);padding:20px}
+.confirm-overlay.show{opacity:1;pointer-events:all}
+.confirm-box{background:#fff;border-radius:20px;padding:24px 20px 20px;width:100%;max-width:360px;transform:scale(.88);transition:transform .25s cubic-bezier(.34,1.4,.64,1)}
+.confirm-overlay.show .confirm-box{transform:scale(1)}
+.confirm-icon{font-size:36px;text-align:center;margin-bottom:10px}
+.confirm-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:8px}
+.confirm-body{font-size:13px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:18px}
+.confirm-btns{display:flex;gap:8px}
+.confirm-btn{flex:1;padding:12px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--surface2);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .15s}
+.confirm-btn.ok{background:linear-gradient(135deg,#f090b0,#e8789a);color:#fff;border:none;box-shadow:0 3px 12px rgba(232,120,154,.35)}
+.confirm-btn.ok:hover{transform:translateY(-1px)}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.18);transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* PRINT */
+@media print{
+  @page{size:A4 landscape;margin:10mm 8mm}
+  .app-header,.tab-bar,.assign-btn,.action-row,.card:first-child,.unavail-section,.result-month-badge{display:none!important}
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{display:block!important;padding:0;max-width:100%}
+  #page-history,#page-settings{display:none!important}
+  .result-area{display:block!important}
+  .print-hdr{display:flex!important}
+  .cell-inner{min-height:55px}
+}
+.print-hdr{display:none;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:14px;border-bottom:2px solid var(--pink)}
+.print-hdr-title{font-size:18px;font-weight:700}
+.print-hdr-month{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <span style="font-size:22px">🏠</span>
+  <div class="app-title">おうち<span>分担</span></div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showPage('home',this)"><span class="ti">✨</span>ホーム</button>
+  <button class="tab-btn" onclick="showPage('history',this)"><span class="ti">📋</span>履歴</button>
+  <button class="tab-btn" onclick="showPage('settings',this)"><span class="ti">⚙️</span>設定</button>
+</div>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="print-hdr">
+    <div class="print-hdr-title">🏠 おうち分担</div>
+    <div class="print-hdr-month" id="printMonth"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">📅 対象月を選ぶ</div>
+    <select class="month-select" id="monthSelect" onchange="onMonthChange()"></select>
+    <div class="unavail-section">
+      <div class="unavail-label">🚫 分担しない日（タップして設定）</div>
+      <div class="umcal-hdr">
+        <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
+      </div>
+      <div class="umcal-grid" id="unavailGrid"></div>
+    </div>
+  </div>
+  <button class="assign-btn" onclick="assign()">
+    <span style="font-size:20px">🎲</span><span>ランダムに分担する</span>
+  </button>
+  <div class="result-area" id="resultArea">
+    <div style="height:14px"></div>
+    <div class="card">
+      <div class="card-hdr">🗓 分担カレンダー</div>
+      <div class="result-month-badge">📅 <span id="resultMonthLabel"></span></div>
+      <div class="legend" id="legend"></div>
+      <div class="cal-wrap"><table class="cal-table" id="calTable"></table></div>
+      <div class="action-row">
+        <button class="action-btn" onclick="copyResult()"><span class="ab-icon">📋</span>コピー</button>
+        <button class="action-btn" onclick="saveResult()"><span class="ab-icon">💾</span>保存</button>
+        <button class="action-btn" onclick="window.print()"><span class="ab-icon">🖨️</span>PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <div class="page-title">📋 履歴</div>
+  <div class="page-sub">保存済みの分担一覧</div>
+  <div id="historyList"></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-title">⚙️ 設定</div>
+  <div class="page-sub">メンバーと家事を編集できます</div>
+  <div class="settings-section">
+    <div class="settings-section-title">👤 メンバー</div>
+    <div id="memberInputs"></div>
+    <button class="add-btn" onclick="addMemberInput()">＋ メンバーを追加</button>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">🧹 家事リスト</div>
+    <div id="choreInputs"></div>
+    <button class="add-btn" onclick="addChoreInput()">＋ 家事を追加</button>
+  </div>
+  <button class="save-settings-btn" onclick="saveSettings()">💾 設定を保存する</button>
+</div>
+
+<!-- 不可日モーダル -->
+<div class="modal-overlay" id="unavailModal" onclick="closeModalOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-title">🚫 <span id="modalDateLabel"></span></div>
+    <div class="modal-sub">分担しないメンバーを選んでね（複数OK）</div>
+    <div class="modal-member-grid" id="modalMemberGrid"></div>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="clearDayUnavail()">この日をクリア</button>
+      <button class="modal-btn primary" onclick="confirmDayUnavail()">決定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 確認ポップアップ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠️</div>
+    <div class="confirm-title">回数が足りない家事があるよ</div>
+    <div class="confirm-body" id="confirmBody"></div>
+    <div class="confirm-btns">
+      <button class="confirm-btn" onclick="closeConfirm()">見直す</button>
+      <button class="confirm-btn ok" onclick="confirmAssign()">それでもOK</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== SERVICE WORKER ===== */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+/* ===== ICON MAP ===== */
+const ICON_MAP=[['皿洗い','🍽️'],['床掃除','🧹'],['部屋掃除','🏠'],['洗濯','👕'],['買い物','🛒'],['料理','🍳'],['洗面所','🪥'],['風呂','🛁'],['トイレ','🚽'],['ゴミ','🗑️'],['窓','🪟'],['植物','🌱'],['アイロン','👔']];
+function getIcon(n){for(const[k,v]of ICON_MAP)if(n.includes(k))return v;return'✨'}
+
+/* ===== CONSTANTS ===== */
+const AVATARS=['🌸','🌿','🌙','⭐','🌼'];
+const MEMBER_COLORS=['var(--pink)','var(--mint)','var(--lav)','var(--sky)','var(--pch)'];
+const TAG_CLS=['tag-0','tag-1','tag-2','tag-3','tag-4'];
+const UB_CLS=['ub-0','ub-1','ub-2','ub-3','ub-4'];
+const DAYS_JA=['日','月','火','水','木','金','土'];
+const DAYS_SHORT=['日','月','火','水','木','金','土'];
+
+/* ===== FREQ HELPERS =====
+  chore.freqType: 'monthly' | 'weekly' | 'daily'
+  chore.freqCount: 月N回 or 週N回 (dailyは無視)
+  chore.days: [0-6] 曜日指定（空配列=指定なし）
+*/
+function freqLabel(c){
+  if(c.freqType==='daily')return'毎日';
+  if(c.freqType==='monthly')return`月${c.freqCount}回`;
+  return`週${c.freqCount}回`;
+}
+
+/* ===== DEFAULTS ===== */
+const DEFAULT_MEMBERS=['利空','優希'];
+const DEFAULT_CHORES=[
+  {name:'皿洗い',     freqType:'daily',   freqCount:1, days:[]},
+  {name:'床掃除',     freqType:'weekly',  freqCount:1, days:[]},
+  {name:'部屋掃除',   freqType:'weekly',  freqCount:1, days:[]},
+  {name:'洗濯（干す）',freqType:'weekly', freqCount:2, days:[]},
+  {name:'洗濯（畳む）',freqType:'weekly', freqCount:2, days:[]},
+  {name:'買い物',     freqType:'weekly',  freqCount:2, days:[]},
+  {name:'料理',       freqType:'daily',   freqCount:1, days:[]},
+  {name:'洗面所掃除', freqType:'monthly', freqCount:1, days:[]},
+  {name:'風呂掃除',   freqType:'weekly',  freqCount:1, days:[]},
+  {name:'トイレ掃除', freqType:'monthly', freqCount:1, days:[]},
+];
+
+/* ===== STATE ===== */
+let members    =JSON.parse(localStorage.getItem('oc_members')||'null')||[...DEFAULT_MEMBERS];
+let chores     =JSON.parse(localStorage.getItem('oc_chores') ||'null')||DEFAULT_CHORES.map(c=>({...c}));
+let history    =JSON.parse(localStorage.getItem('oc_history')||'[]');
+let unavailDays=JSON.parse(localStorage.getItem('oc_unavail')||'{}');
+let lastResult =null;
+let lastMoreIdx=JSON.parse(localStorage.getItem('oc_lastMoreIdx')||'null');
+let pendingResult=null;
+let modalDay=null;
+let modalSelMembers=new Set();
+
+/* ===== INIT ===== */
+(function init(){buildMonthSelect();renderSettings();renderHistory();renderUnavailCal();})();
+
+/* ===== MONTH ===== */
+function buildMonthSelect(){
+  const sel=document.getElementById('monthSelect');sel.innerHTML='';
+  const now=new Date();
+  for(let i=-1;i<=6;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    const y=d.getFullYear(),m=d.getMonth()+1;
+    const opt=document.createElement('option');
+    opt.value=`${y}-${String(m).padStart(2,'0')}`;
+    opt.textContent=`${y}年${m}月`;
+    if(i===0)opt.selected=true;
+    sel.appendChild(opt);
+  }
+}
+function getMonthKey(){return document.getElementById('monthSelect').value;}
+function onMonthChange(){renderUnavailCal();document.getElementById('resultArea').classList.remove('visible');lastResult=null;}
+
+/* ===== UNAVAIL CAL ===== */
+function getUnavailForMonth(){return unavailDays[getMonthKey()]||{};}
+function renderUnavailCal(){
+  const monthVal=getMonthKey();
+  const[y,m]=monthVal.split('-').map(Number);
+  const firstDay=new Date(y,m-1,1).getDay();
+  const lastDate=new Date(y,m,0).getDate();
+  const today=new Date();
+  const ud=getUnavailForMonth();
+  const grid=document.getElementById('unavailGrid');grid.innerHTML='';
+  for(let i=0;i<firstDay;i++){const c=document.createElement('div');c.className='umcal-cell empty';grid.appendChild(c);}
+  for(let d=1;d<=lastDate;d++){
+    const dow=(firstDay+d-1)%7;
+    const isToday=(y===today.getFullYear()&&m===today.getMonth()+1&&d===today.getDate());
+    const hasSel=ud[d]&&ud[d].length>0;
+    const cell=document.createElement('div');
+    let cls='umcal-cell';
+    if(dow===0)cls+=' sun-cell';if(dow===6)cls+=' sat-cell';
+    if(isToday)cls+=' today';if(hasSel)cls+=' has-unavail';
+    cell.className=cls;
+    cell.innerHTML=`<span style="font-size:11px;font-weight:700">${d}</span>`;
+    if(hasSel){
+      const bw=document.createElement('div');bw.className='unavail-badges';
+      (ud[d]||[]).forEach(mi=>{const b=document.createElement('span');b.className=`unavail-badge ${UB_CLS[mi]}`;b.textContent=members[mi]?members[mi].charAt(0):'?';bw.appendChild(b);});
+      cell.appendChild(bw);
+    }
+    cell.addEventListener('click',()=>openUnavailModal(d));
+    grid.appendChild(cell);
+  }
+}
+
+/* ===== UNAVAIL MODAL ===== */
+function openUnavailModal(day){
+  modalDay=day;
+  const[y,m]=getMonthKey().split('-').map(Number);
+  document.getElementById('modalDateLabel').textContent=`${m}月${day}日`;
+  const ud=getUnavailForMonth();
+  modalSelMembers=new Set(ud[day]||[]);
+  renderModalChips();
+  document.getElementById('unavailModal').classList.add('show');
+}
+function closeModal(){document.getElementById('unavailModal').classList.remove('show');modalDay=null;}
+function closeModalOutside(e){if(e.target===document.getElementById('unavailModal'))closeModal();}
+function renderModalChips(){
+  const grid=document.getElementById('modalMemberGrid');grid.innerHTML='';
+  members.forEach((m,i)=>{
+    const sel=modalSelMembers.has(i);
+    const chip=document.createElement('button');
+    chip.className='modal-member-chip'+(sel?` sel-${i}`:'');
+    chip.innerHTML=`<span>${sel?'✓':''}</span>${AVATARS[i]} ${esc(m)}`;
+    chip.onclick=()=>{if(modalSelMembers.has(i))modalSelMembers.delete(i);else modalSelMembers.add(i);renderModalChips();};
+    grid.appendChild(chip);
+  });
+}
+function confirmDayUnavail(){
+  if(!modalDay)return;
+  const key=getMonthKey();
+  if(!unavailDays[key])unavailDays[key]={};
+  if(modalSelMembers.size===0)delete unavailDays[key][modalDay];
+  else unavailDays[key][modalDay]=[...modalSelMembers].sort();
+  localStorage.setItem('oc_unavail',JSON.stringify(unavailDays));
+  closeModal();renderUnavailCal();
+}
+function clearDayUnavail(){
+  if(!modalDay)return;
+  const key=getMonthKey();
+  if(unavailDays[key])delete unavailDays[key][modalDay];
+  localStorage.setItem('oc_unavail',JSON.stringify(unavailDays));
+  closeModal();renderUnavailCal();
+}
+
+/* ===== ASSIGN ===== */
+function assign(){
+  if(members.length<2){showToast('⚠️ メンバーが2人以上必要です');return;}
+  if(chores.length===0){showToast('⚠️ 家事を追加してください');return;}
+  const monthVal=getMonthKey();
+  const[y,m]=monthVal.split('-').map(Number);
+  const firstDay=new Date(y,m-1,1).getDay();
+  const lastDate=new Date(y,m,0).getDate();
+  const ud=getUnavailForMonth();
+
+  const result=weightedFairSplit(chores,members,lastMoreIdx);
+  const sizes=result.map(r=>r.chores.length);
+  const max=Math.max(...sizes);
+  if(sizes.some(s=>s!==max)){lastMoreIdx=sizes.indexOf(max);localStorage.setItem('oc_lastMoreIdx',JSON.stringify(lastMoreIdx));}
+
+  // 警告チェック（週N回のみ）
+  const warnings=[];
+  result.forEach((bucket,bi)=>{
+    bucket.chores.forEach(chore=>{
+      if(chore.freqType==='daily'||chore.freqType==='monthly')return;
+      const dates=pickDates(chore,bi,firstDay,lastDate,ud,result.length);
+      // 週あたりの実績確認
+      const weeks=getWeeks(firstDay,lastDate);
+      let shortWeeks=0;
+      weeks.forEach(wk=>{
+        const wkDates=dates.filter(d=>wk.includes(d));
+        if(wkDates.length<chore.freqCount)shortWeeks++;
+      });
+      if(shortWeeks>0){
+        warnings.push(`「${chore.name}」(${esc(bucket.name)})：週${chore.freqCount}回設定だけど入りきらない週が${shortWeeks}週あるよ`);
+      }
+    });
+  });
+
+  if(warnings.length>0){
+    pendingResult=result;
+    document.getElementById('confirmBody').innerHTML=warnings.map(w=>`・${w}`).join('<br>');
+    document.getElementById('confirmOverlay').classList.add('show');
+  } else {
+    lastResult=result;renderCalendar();
+  }
+}
+
+function getWeeks(firstDay,lastDate){
+  const weeks=[];let week=[];
+  for(let d=1;d<=lastDate;d++){
+    const dow=(firstDay+d-1)%7;
+    if(dow===0&&week.length>0){weeks.push(week);week=[];}
+    week.push(d);
+  }
+  if(week.length>0)weeks.push(week);
+  return weeks;
+}
+
+function confirmAssign(){document.getElementById('confirmOverlay').classList.remove('show');lastResult=pendingResult;pendingResult=null;renderCalendar();}
+function closeConfirm(){document.getElementById('confirmOverlay').classList.remove('show');pendingResult=null;}
+
+/* ===== SPLIT ===== */
+function weightedFairSplit(chores,members,lastMoreIdx){
+  const shuffled=[...chores].sort(()=>Math.random()-.5);
+  const n=members.length,base=Math.floor(shuffled.length/n),extra=shuffled.length%n;
+  let moreIdx=null;
+  if(extra>0)moreIdx=(lastMoreIdx===null)?0:(lastMoreIdx+1)%n;
+  function weight(c){if(c.freqType==='daily')return 5;if(c.freqType==='monthly')return 1;return c.freqCount;}
+  const buckets=members.map((m,i)=>({name:m,chores:[],weight:0,limit:base+(extra>0&&i===moreIdx?1:0)}));
+  for(const chore of shuffled){
+    const eligible=buckets.filter(b=>b.chores.length<b.limit);
+    eligible.sort((a,b)=>a.weight-b.weight);
+    eligible[0].chores.push(chore);eligible[0].weight+=weight(chore);
+  }
+  return buckets;
+}
+
+/* ===== PICK DATES ===== */
+function pickDates(chore,memberIdx,firstDay,lastDate,ud,numMembers){
+  const{freqType,freqCount,days}=chore;
+  const hasDay=days&&days.length>0;
+
+  if(freqType==='daily'){
+    // 毎日：全日から不可除く
+    const all=[];
+    for(let d=1;d<=lastDate;d++){if(!(ud[d]||[]).includes(memberIdx))all.push(d);}
+    return all;
+  }
+
+  if(freqType==='monthly'){
+    // 月N回：月全体から曜日・不可を考慮してN日選ぶ
+    const candidates=[];
+    for(let d=1;d<=lastDate;d++){
+      const dow=(firstDay+d-1)%7;
+      if((ud[d]||[]).includes(memberIdx))continue;
+      if(hasDay&&!days.includes(dow))continue;
+      candidates.push(d);
+    }
+    // 均等に散らす
+    return pickEvenly(candidates,freqCount,memberIdx);
+  }
+
+  // weekly：週ごとにfreqCount日選ぶ
+  const weeks=getWeeks(firstDay,lastDate);
+  const dates=[];
+  weeks.forEach(wk=>{
+    const candidates=wk.filter(d=>{
+      const dow=(firstDay+d-1)%7;
+      if((ud[d]||[]).includes(memberIdx))return false;
+      if(hasDay&&!days.includes(dow))return false;
+      return true;
+    });
+    const picked=pickEvenly(candidates,freqCount,memberIdx);
+    dates.push(...picked);
+  });
+  return[...new Set(dates)].sort((a,b)=>a-b);
+}
+
+function pickEvenly(candidates,count,memberIdx){
+  if(candidates.length===0)return[];
+  if(candidates.length<=count)return[...candidates];
+  // メンバーインデックスでオフセットをつけて均等配置
+  const step=candidates.length/count;
+  const result=[];
+  for(let i=0;i<count;i++){
+    const idx=Math.floor((i*step+memberIdx)%candidates.length);
+    result.push(candidates[idx]);
+  }
+  return[...new Set(result)].sort((a,b)=>a-b);
+}
+
+/* ===== RENDER CALENDAR ===== */
+function renderCalendar(){
+  const monthVal=getMonthKey();
+  const[y,m]=monthVal.split('-').map(Number);
+  const label=`${y}年${m}月`;
+  document.getElementById('resultMonthLabel').textContent=label;
+  document.getElementById('printMonth').textContent=label;
+  const firstDay=new Date(y,m-1,1).getDay();
+  const lastDate=new Date(y,m,0).getDate();
+  const ud=getUnavailForMonth();
+  const today=new Date();
+
+  const events=[];
+  lastResult.forEach((bucket,bi)=>{
+    bucket.chores.forEach(chore=>{
+      const dates=pickDates(chore,bi,firstDay,lastDate,ud,lastResult.length);
+      dates.forEach(d=>events.push({date:d,memberIdx:bi,chore}));
+    });
+  });
+
+  document.getElementById('legend').innerHTML=lastResult.map((b,i)=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${MEMBER_COLORS[i]}"></div>
+      <span>${AVATARS[i]} ${esc(b.name)}</span>
+    </div>`).join('');
+
+  const table=document.getElementById('calTable');table.innerHTML='';
+  const thead=document.createElement('thead');
+  thead.innerHTML='<tr>'+DAYS_JA.map((d,i)=>`<th class="${i===0?'sun':i===6?'sat':''}">${d}</th>`).join('')+'</tr>';
+  table.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  let row=null,col=0;
+  if(firstDay>0){
+    row=document.createElement('tr');
+    for(let i=0;i<firstDay;i++){const td=document.createElement('td');td.className='empty';td.innerHTML='<div class="cell-inner"></div>';row.appendChild(td);}
+    col=firstDay;
+  }
+  for(let d=1;d<=lastDate;d++){
+    if(!row||col===0)row=document.createElement('tr');
+    const dow=(firstDay+d-1)%7;
+    const isToday=(y===today.getFullYear()&&m===today.getMonth()+1&&d===today.getDate());
+    const dayUnavail=ud[d]||[];
+    const allUnavail=dayUnavail.length===members.length;
+    const td=document.createElement('td');
+    if(allUnavail)td.className='unavail-day';
+    const dayCls=['cell-day',isToday?'today':dow===0?'sun':dow===6?'sat':''].filter(Boolean).join(' ');
+    const inner=document.createElement('div');inner.className='cell-inner';
+    inner.innerHTML=`<div class="${dayCls}">${d}</div>`;
+    events.filter(e=>e.date===d).forEach(e=>{
+      const tag=document.createElement('span');
+      tag.className=`chore-tag ${TAG_CLS[e.memberIdx]}`;
+      tag.textContent=`${getIcon(e.chore.name)}${esc(e.chore.name)}`;
+      inner.appendChild(tag);
+    });
+    if(allUnavail){const mk=document.createElement('div');mk.className='unavail-marker';mk.textContent='全員お休み 🌸';inner.appendChild(mk);}
+    else if(dayUnavail.length>0){const mk=document.createElement('div');mk.className='unavail-marker';mk.textContent=dayUnavail.map(i=>members[i]?members[i].charAt(0)+'🚫':'').join(' ');inner.appendChild(mk);}
+    td.appendChild(inner);row.appendChild(td);col++;
+    if(col===7){tbody.appendChild(row);row=null;col=0;}
+  }
+  if(row){while(col<7){const td=document.createElement('td');td.className='empty';td.innerHTML='<div class="cell-inner"></div>';row.appendChild(td);col++;}tbody.appendChild(row);}
+  table.appendChild(tbody);
+  const area=document.getElementById('resultArea');
+  area.classList.add('visible');
+  setTimeout(()=>area.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+/* ===== COPY ===== */
+function copyResult(){
+  if(!lastResult)return;
+  const label=document.getElementById('resultMonthLabel').textContent;
+  let text=`【${label} 家事分担】\n\n`;
+  lastResult.forEach(b=>{text+=`▶ ${b.name}\n`;b.chores.forEach(c=>text+=`  ${getIcon(c.name)} ${c.name}（${freqLabel(c)}）\n`);text+='\n';});
+  navigator.clipboard.writeText(text).then(()=>showToast('📋 コピーしました')).catch(()=>showToast('⚠️ コピー失敗'));
+}
+
+/* ===== SAVE ===== */
+function saveResult(){
+  if(!lastResult)return;
+  const monthVal=getMonthKey();
+  history=history.filter(h=>h.month!==monthVal);
+  history.unshift({month:monthVal,result:lastResult,savedAt:new Date().toLocaleString('ja-JP')});
+  localStorage.setItem('oc_history',JSON.stringify(history));
+  renderHistory();showToast('💾 履歴に保存しました');
+}
+
+/* ===== HISTORY ===== */
+function renderHistory(){
+  const el=document.getElementById('historyList');
+  if(history.length===0){el.innerHTML='<div class="history-empty"><div class="he-icon">📭</div><div>まだ保存された履歴がありません</div></div>';return;}
+  el.innerHTML='';
+  history.forEach((h,i)=>{
+    const[y,m]=h.month.split('-');const label=`${y}年${parseInt(m)}月`;
+    const card=document.createElement('div');card.className='history-card';
+    card.innerHTML=`
+      <div class="history-card-hdr" onclick="this.parentElement.classList.toggle('open')">
+        <div><div class="history-month">📅 ${label}</div><div class="history-meta">保存日時：${h.savedAt}</div></div>
+        <span class="history-toggle">▾</span>
+      </div>
+      <div class="history-body">
+        <div class="history-members-grid">
+          ${h.result.map((b,bi)=>`<div><div class="history-member-name">${AVATARS[bi%AVATARS.length]} ${esc(b.name)}</div>${b.chores.map(c=>`<div class="history-chore-item"><span>${getIcon(c.name)}</span>${esc(c.name)}</div>`).join('')}</div>`).join('')}
+        </div>
+        <button class="history-del-btn" onclick="deleteHistory(${i})">🗑 この月の履歴を削除</button>
+      </div>`;
+    el.appendChild(card);
+  });
+}
+function deleteHistory(i){history.splice(i,1);localStorage.setItem('oc_history',JSON.stringify(history));renderHistory();showToast('🗑 削除しました');}
+
+/* ===== SETTINGS ===== */
+function renderSettings(){
+  // Members
+  const mi=document.getElementById('memberInputs');mi.innerHTML='';
+  members.forEach((m,i)=>{
+    const row=document.createElement('div');row.className='member-input-row';
+    row.innerHTML=`<span style="font-size:18px;flex-shrink:0">${AVATARS[i%AVATARS.length]}</span><input class="member-input" type="text" value="${esc(m)}" placeholder="名前"><button class="remove-btn" onclick="removeMember(${i})">✕</button>`;
+    mi.appendChild(row);
+  });
+
+  // Chores
+  const ci=document.getElementById('choreInputs');ci.innerHTML='';
+  chores.forEach((c,i)=>ci.appendChild(buildChoreRow(c,i)));
+}
+
+function buildChoreRow(c,i){
+  const row=document.createElement('div');row.className='chore-settings-row';row.dataset.idx=i;
+
+  const ft=c.freqType||'weekly';
+  const fc=c.freqCount||1;
+  const cdays=c.days||[];
+
+  // 上段：アイコン＋名前＋削除
+  const top=document.createElement('div');top.className='chore-row-top';
+  top.innerHTML=`
+    <span class="chore-row-icon">${getIcon(c.name)}</span>
+    <input class="chore-name-input" type="text" value="${esc(c.name)}" placeholder="家事名" oninput="updateChoreIcon(this)">
+    <button class="remove-btn" onclick="removeChore(${i})">✕</button>`;
+  row.appendChild(top);
+
+  // 頻度タイプボタン
+  const typeRow=document.createElement('div');typeRow.className='freq-type-row';
+  ['monthly','weekly','daily'].forEach(type=>{
+    const btn=document.createElement('button');
+    btn.className='freq-type-btn'+(ft===type?' active':'');
+    btn.textContent=type==='monthly'?'月':type==='weekly'?'週':'毎日';
+    btn.onclick=()=>{
+      row.querySelectorAll('.freq-type-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      updateFreqUI(row,type,fc,cdays);
+    };
+    typeRow.appendChild(btn);
+  });
+  row.appendChild(typeRow);
+
+  // 回数・曜日エリア
+  const extra=document.createElement('div');extra.className='freq-extra';
+  row.appendChild(extra);
+  updateFreqUI(row,ft,fc,cdays);
+
+  return row;
+}
+
+function updateFreqUI(row,freqType,freqCount,days){
+  const extra=row.querySelector('.freq-extra');extra.innerHTML='';
+  if(freqType==='daily')return; // 毎日は追加UIなし
+
+  // 回数チップ
+  const maxCount=freqType==='monthly'?4:7;
+  const countRow=document.createElement('div');countRow.className='freq-count-row';
+  for(let n=1;n<=maxCount;n++){
+    const chip=document.createElement('button');
+    chip.className='freq-count-chip'+(freqCount===n?' active':'');
+    chip.textContent=n;
+    chip.onclick=()=>{
+      countRow.querySelectorAll('.freq-count-chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+    };
+    countRow.appendChild(chip);
+  }
+  extra.appendChild(countRow);
+
+  // 曜日指定（weeklyのみ）
+  if(freqType==='weekly'){
+    const dl=document.createElement('div');dl.className='day-label';dl.textContent='曜日指定（任意・複数OK）';
+    extra.appendChild(dl);
+    const dayRow=document.createElement('div');dayRow.className='day-chips-row';
+    DAYS_SHORT.forEach((d,idx)=>{
+      const chip=document.createElement('button');
+      let cls='day-chip';
+      if(idx===0)cls+=' sun-chip';if(idx===6)cls+=' sat-chip';
+      if(days.includes(idx))cls+=' active';
+      chip.className=cls;chip.textContent=d;
+      chip.onclick=()=>chip.classList.toggle('active');
+      dayRow.appendChild(chip);
+    });
+    extra.appendChild(dayRow);
+  }
+}
+
+function updateChoreIcon(input){
+  const icon=input.closest('.chore-settings-row').querySelector('.chore-row-icon');
+  if(icon)icon.textContent=getIcon(input.value);
+}
+
+function addMemberInput(){members.push('');renderSettings();setTimeout(()=>{const a=document.querySelectorAll('.member-input');a[a.length-1].focus();},50);}
+function removeMember(i){members.splice(i,1);renderSettings();}
+function addChoreInput(){chores.push({name:'',freqType:'weekly',freqCount:1,days:[]});renderSettings();setTimeout(()=>{const a=document.querySelectorAll('.chore-name-input');a[a.length-1].focus();},50);}
+function removeChore(i){chores.splice(i,1);renderSettings();}
+
+function saveSettings(){
+  members=Array.from(document.querySelectorAll('.member-input')).map(el=>el.value.trim()).filter(Boolean);
+  chores=[];
+  document.querySelectorAll('.chore-settings-row').forEach(row=>{
+    const name=row.querySelector('.chore-name-input').value.trim();
+    if(!name)return;
+    const activeType=row.querySelector('.freq-type-btn.active');
+    const freqType=activeType?(activeType.textContent==='月'?'monthly':activeType.textContent==='週'?'weekly':'daily'):'weekly';
+    const activeCount=row.querySelector('.freq-count-chip.active');
+    const freqCount=activeCount?parseInt(activeCount.textContent):1;
+    const days=[];
+    row.querySelectorAll('.day-chip.active').forEach(chip=>{
+      const idx=DAYS_SHORT.indexOf(chip.textContent);
+      if(idx>=0)days.push(idx);
+    });
+    chores.push({name,freqType,freqCount,days});
+  });
+  localStorage.setItem('oc_members',JSON.stringify(members));
+  localStorage.setItem('oc_chores',JSON.stringify(chores));
+  renderSettings();
+  document.getElementById('resultArea').classList.remove('visible');lastResult=null;
+  showToast('✅ 設定を保存しました');
+}
+
+/* ===== NAV ===== */
+function showPage(page,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  btn.classList.add('active');
+  if(page==='history')renderHistory();
+  if(page==='settings')renderSettings();
+  if(page==='home')renderUnavailCal();
+}
+
+/* ===== TOAST ===== */
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+/* ===== UTIL ===== */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>

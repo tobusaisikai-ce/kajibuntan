@@ -1,0 +1,18 @@
+{
+  "name": "おうち分担",
+  "short_name": "分担",
+  "description": "家事をランダムに均等分担するアプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fdf6f9",
+  "theme_color": "#e8789a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
