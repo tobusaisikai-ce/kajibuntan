@@ -49,15 +49,16 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .result-area{display:none}.result-area.visible{display:block}
 .result-month-badge{display:inline-flex;align-items:center;gap:6px;background:var(--pink-l);color:var(--pink);border:1.5px solid var(--pink-b);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;margin-bottom:12px}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700}.legend-dot{width:10px;height:10px;border-radius:50%}
-/* 家事回数サマリー */
+/* 家事回数サマリー - スマホは1列、PCは2列 */
 .chore-summary{margin-bottom:12px}.chore-summary-title{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.08em;margin-bottom:8px}
-.chore-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.chore-summary-row{background:var(--s2);border-radius:8px;padding:7px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
-.chore-summary-name{font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;flex:1;min-width:0;overflow:hidden}
-.chore-summary-name span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chore-summary-counts{display:flex;gap:5px;flex-shrink:0}
-.chore-count-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
-/* カレンダー */
+.chore-summary-grid{display:grid;grid-template-columns:1fr;gap:6px}
+@media(min-width:540px){.chore-summary-grid{grid-template-columns:1fr 1fr}}
+.chore-summary-row{background:var(--s2);border-radius:8px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chore-summary-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.chore-summary-name span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chore-summary-counts{display:flex;gap:6px;flex-shrink:0}
+.chore-count-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap}
+/* カレンダー（PC表示） */
 .cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .cal-table{width:100%;border-collapse:separate;border-spacing:0;min-width:300px}
 .cal-table thead th{font-size:11px;font-weight:700;color:var(--muted);padding:6px 2px;text-align:center;background:var(--s2);border-bottom:1.5px solid var(--border)}
@@ -70,9 +71,37 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 td.empty .cell-inner{background:var(--s2)}td.all-unavail .cell-inner{background:#fff5f8}
 .chore-tag{font-size:9px;font-weight:700;border-radius:3px;padding:2px 3px;line-height:1.3;word-break:break-all;display:block}
 .unavail-marker{font-size:8px;color:var(--dim);font-weight:700;text-align:center;line-height:1.2}
-.action-row{display:flex;gap:8px;margin-top:12px}
-.action-btn{flex:1;padding:11px 6px;border:1.5px solid var(--border);background:var(--surface);border-radius:var(--rs);font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+/* スマホでカレンダーを非表示→リスト表示 */
+.cal-view{display:none}
+.list-view{display:block}
+@media(min-width:540px){.cal-view{display:block}.list-view{display:none}}
+/* リスト表示（スマホ用） */
+.list-members-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.list-member-col{border-radius:var(--rs);overflow:hidden;border:1.5px solid var(--border)}
+.list-member-hdr{padding:8px 10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.list-day-row{display:flex;align-items:baseline;gap:6px;padding:5px 10px;border-top:1px solid var(--border2)}
+.list-day-num{font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0;width:22px}
+.list-day-num.sun{color:#e05070}.list-day-num.sat{color:var(--sky)}
+.list-day-chores{display:flex;flex-direction:column;gap:2px;flex:1}
+.list-chore-item{font-size:11px;font-weight:700;padding:2px 5px;border-radius:4px;line-height:1.4}
+/* アクションボタン */
+.action-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.action-btn{flex:1;min-width:60px;padding:11px 6px;border:1.5px solid var(--border);background:var(--surface);border-radius:var(--rs);font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
 .action-btn .ab-icon{font-size:18px}.action-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-l)}.action-btn:active{transform:scale(.96)}
+/* PDFモーダル */
+.pdf-modal-overlay{position:fixed;inset:0;background:rgba(61,44,56,.45);z-index:600;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(3px)}
+.pdf-modal-overlay.show{opacity:1;pointer-events:all}
+.pdf-modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.2,.64,1)}
+.pdf-modal-overlay.show .pdf-modal-sheet{transform:translateY(0)}
+.pdf-modal-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.pdf-modal-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.pdf-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.pdf-choice-btn{padding:18px 12px;border:2px solid var(--border);border-radius:var(--r);background:var(--s2);font-family:inherit;cursor:pointer;text-align:center;transition:all .2s}
+.pdf-choice-btn:hover,.pdf-choice-btn.selected{border-color:var(--pink);background:var(--pink-l)}
+.pdf-choice-icon{font-size:28px;margin-bottom:6px}
+.pdf-choice-label{font-size:13px;font-weight:700;color:var(--text)}
+.pdf-choice-desc{font-size:11px;color:var(--muted);margin-top:3px}
+.pdf-modal-cancel{width:100%;padding:12px;border:1.5px solid var(--border);background:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer}
 /* PDF生成中 */
 .pdf-loading{position:fixed;inset:0;background:rgba(61,44,56,.55);z-index:800;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
 .pdf-loading.show{display:flex}.pdf-loading-text{color:#fff;font-size:15px;font-weight:700}
@@ -199,15 +228,20 @@ td.empty .cell-inner{background:var(--s2)}td.all-unavail .cell-inner{background:
   <div class="result-area" id="resultArea">
     <div style="height:14px"></div>
     <div class="card">
-      <div class="card-hdr">🗓 分担カレンダー</div>
+      <div class="card-hdr">🗓 分担結果</div>
       <div class="result-month-badge">📅 <span id="resultMonthLabel"></span></div>
       <div class="legend" id="legend"></div>
       <div class="chore-summary" id="choreSummary"></div>
-      <div class="cal-wrap"><table class="cal-table" id="calTable"></table></div>
+      <!-- スマホ：リスト表示 -->
+      <div class="list-view" id="listView"></div>
+      <!-- PC：カレンダー表示 -->
+      <div class="cal-view">
+        <div class="cal-wrap"><table class="cal-table" id="calTable"></table></div>
+      </div>
       <div class="action-row">
         <button class="action-btn" onclick="copyResult()"><span class="ab-icon">📋</span>コピー</button>
         <button class="action-btn" onclick="saveResult()"><span class="ab-icon">💾</span>保存</button>
-        <button class="action-btn" onclick="generatePDF(null)"><span class="ab-icon">🖨️</span>PDF</button>
+        <button class="action-btn" onclick="openPdfModal(null)"><span class="ab-icon">🖨️</span>PDF</button>
       </div>
     </div>
   </div>
@@ -247,6 +281,27 @@ td.empty .cell-inner{background:var(--s2)}td.all-unavail .cell-inner{background:
       <button class="modal-btn" onclick="clearDayUnavail()">この日をクリア</button>
       <button class="modal-btn primary" onclick="confirmDayUnavail()">決定</button>
     </div>
+  </div>
+</div>
+
+<!-- PDF種類選択モーダル -->
+<div class="pdf-modal-overlay" id="pdfModal" onclick="closePdfModalOutside(event)">
+  <div class="pdf-modal-sheet">
+    <div class="pdf-modal-title">🖨️ PDF出力</div>
+    <div class="pdf-modal-sub">どちらの形式で出力しますか？</div>
+    <div class="pdf-choice-grid">
+      <button class="pdf-choice-btn" onclick="selectPdfType('calendar')">
+        <div class="pdf-choice-icon">🗓</div>
+        <div class="pdf-choice-label">カレンダー</div>
+        <div class="pdf-choice-desc">月カレンダー形式<br>A4横向き</div>
+      </button>
+      <button class="pdf-choice-btn" onclick="selectPdfType('list')">
+        <div class="pdf-choice-icon">📋</div>
+        <div class="pdf-choice-label">リスト</div>
+        <div class="pdf-choice-desc">人ごと日付順リスト<br>大きな文字</div>
+      </button>
+    </div>
+    <button class="pdf-modal-cancel" onclick="closePdfModal()">キャンセル</button>
   </div>
 </div>
 
@@ -607,10 +662,190 @@ function renderCalendar(){
   const ud=getUnavailForMonth();
   document.getElementById('legend').innerHTML=members.map(b=>`<div class="legend-item"><div class="legend-dot" style="background:${b.color}"></div><span>${b.avatar} ${esc(b.name)}</span></div>`).join('');
   const sumEl=document.getElementById('choreSummary');sumEl.innerHTML='';buildChoreSummary(lastResult,chores,members,sumEl);
+  // PC用カレンダー
   const calWrap=document.querySelector('#resultArea .cal-wrap');calWrap.innerHTML='';
   calWrap.appendChild(buildCalendarTable(lastResult,chores,members,key,ud));
+  // スマホ用リスト
+  buildListView(lastResult,chores,members,key,ud,document.getElementById('listView'));
   const area=document.getElementById('resultArea');area.classList.add('visible');
   setTimeout(()=>area.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+/* ===== リスト表示（スマホ用）===== */
+function buildListView(result,usedChores,usedMembers,monthKey,ud,container){
+  container.innerHTML='';
+  const[y,m]=monthKey.split('-').map(Number);
+  const firstDay=new Date(y,m-1,1).getDay(),lastDate=new Date(y,m,0).getDate();
+  const today=new Date();
+
+  // メンバーごとの日付→家事マップ
+  const memberDays=usedMembers.map(()=>({}));
+  result.forEach(r=>{
+    if(!memberDays[r.memberIdx][r.date])memberDays[r.memberIdx][r.date]=[];
+    const c=usedChores[r.choreIdx];if(c)memberDays[r.memberIdx][r.date].push(c);
+  });
+
+  const grid=document.createElement('div');grid.className='list-members-grid';
+  usedMembers.forEach((mem,mi)=>{
+    const col=document.createElement('div');col.className='list-member-col';
+    col.style.borderColor=mem.color;
+    const hdr=document.createElement('div');hdr.className='list-member-hdr';
+    hdr.style.background=hexAlpha(mem.color,.12);
+    hdr.innerHTML=`<span>${mem.avatar}</span><span style="color:${mem.color}">${esc(mem.name)}</span>`;
+    col.appendChild(hdr);
+
+    for(let d=1;d<=lastDate;d++){
+      const dayChores=memberDays[mi][d];
+      if(!dayChores||!dayChores.length)continue;
+      const dow=(firstDay+d-1)%7;
+      const isToday=(y===today.getFullYear()&&m===today.getMonth()+1&&d===today.getDate());
+      const row=document.createElement('div');row.className='list-day-row';
+      if(isToday)row.style.background=hexAlpha(mem.color,.06);
+      const numEl=document.createElement('div');
+      numEl.className='list-day-num'+(dow===0?' sun':dow===6?' sat':'');
+      numEl.textContent=d;
+      if(isToday){numEl.style.cssText=`background:${mem.color};color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px`;}
+      const choresEl=document.createElement('div');choresEl.className='list-day-chores';
+      dayChores.forEach(c=>{
+        const item=document.createElement('div');item.className='list-chore-item';
+        item.style.cssText=`background:${hexAlpha(mem.color,.15)};color:${mem.color}`;
+        item.textContent=`${c.icon||'✨'}${c.name}`;choresEl.appendChild(item);
+      });
+      row.appendChild(numEl);row.appendChild(choresEl);col.appendChild(row);
+    }
+    grid.appendChild(col);
+  });
+  container.appendChild(grid);
+}
+
+/* ===== PDF モーダル ===== */
+let pdfModalHistIdx=null;
+function openPdfModal(histIdx){
+  pdfModalHistIdx=histIdx;
+  document.querySelectorAll('.pdf-choice-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('pdfModal').classList.add('show');
+}
+function closePdfModal(){document.getElementById('pdfModal').classList.remove('show');}
+function closePdfModalOutside(e){if(e.target===document.getElementById('pdfModal'))closePdfModal();}
+function selectPdfType(type){
+  closePdfModal();
+  if(type==='calendar')generatePDF(pdfModalHistIdx);
+  else generateListPDF(pdfModalHistIdx);
+}
+
+/* ===== リストPDF ===== */
+async function generateListPDF(histIdx){
+  let pdfResult,pdfChores,pdfMembers,pdfKey,pdfUd;
+  if(histIdx!=null){
+    const h=history[histIdx];if(!h)return;
+    pdfResult=h.result;pdfChores=h.chores||chores;
+    pdfMembers=(h.members||members).map((m,i)=>normalizeMember(m,i));
+    pdfKey=h.month;pdfUd=h.ud||{};
+  }else{
+    if(!lastResult){showToast('⚠️ 先に分担を実行してね');return;}
+    pdfResult=lastResult;pdfChores=chores;pdfMembers=members;
+    pdfKey=getMonthKey();pdfUd=getUnavailForMonth();
+  }
+  const[py,pm]=pdfKey.split('-').map(Number);
+  const pdfLabel=`${py}年${pm}月`;
+  const firstDay=new Date(py,pm-1,1).getDay(),lastDate=new Date(py,pm,0).getDate();
+
+  document.getElementById('pdfLoading').classList.add('show');
+  await new Promise(r=>setTimeout(r,60));
+  try{
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,H=297,M=12,CW=W-M*2;
+    let y=M;
+    const hexRGB=(hex)=>{const h=(hex||'#888888').replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
+    const setFill=(hex)=>{const[r,g,b]=hexRGB(hex);pdf.setFillColor(r,g,b);};
+    const setDraw=(hex)=>{const[r,g,b]=hexRGB(hex);pdf.setDrawColor(r,g,b);};
+    const setFillAlpha=(hex,a)=>{const[r,g,b]=hexRGB(hex);pdf.setFillColor(Math.round(r*a+255*(1-a)),Math.round(g*a+255*(1-a)),Math.round(b*a+255*(1-a)));};
+    const jpText=async(text,x,fy,size=11,color='#3d2c38',align='left')=>{
+      if(!text)return;
+      const canvas=document.createElement('canvas');
+      const scale=3,fs=size*scale;
+      canvas.height=Math.ceil(fs*1.5);
+      const ctx=canvas.getContext('2d');
+      ctx.font=`700 ${fs}px "Noto Sans JP",sans-serif`;
+      const tw=ctx.measureText(String(text)).width;
+      canvas.width=Math.min(Math.ceil(tw)+10,CW*3.78*scale);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.font=`700 ${fs}px "Noto Sans JP",sans-serif`;
+      const[r,g,b]=hexRGB(color);ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.textBaseline='top';
+      let dx=2;
+      if(align==='right'){ctx.textAlign='right';dx=canvas.width-2;}
+      else if(align==='center'){ctx.textAlign='center';dx=canvas.width/2;}
+      ctx.fillText(String(text),dx,2);
+      const pW=canvas.width/scale/3.78,pH=canvas.height/scale/3.78;
+      let px=x;if(align==='right')px=x-pW;else if(align==='center')px=x-pW/2;
+      pdf.addImage(canvas.toDataURL('image/png'),'PNG',px,fy,pW,pH);
+    };
+
+    // ヘッダー
+    setFill('#fde8f0');pdf.rect(M,y,CW,13,'F');
+    await jpText(`🏠 おうち分担　${pdfLabel}　担当リスト`,M+4,y+2.5,14,'#e8789a');
+    y+=17;
+
+    // メンバーごとの日付→家事マップ
+    const memberDays=pdfMembers.map(()=>({}));
+    pdfResult.forEach(r=>{
+      if(!memberDays[r.memberIdx][r.date])memberDays[r.memberIdx][r.date]=[];
+      const c=pdfChores[r.choreIdx];if(c)memberDays[r.memberIdx][r.date].push(c);
+    });
+
+    // 2列でメンバーを並べる
+    const colCount=Math.min(pdfMembers.length,2);
+    const colW2=(CW-(colCount-1)*6)/colCount;
+    const colXs=pdfMembers.map((_,i)=>M+i%colCount*(colW2+6));
+
+    // 各メンバーの行数を先に計算して最大高さを把握
+    const rowH=8; // 1日エントリの高さ
+    const hdrH=10;
+    const itemH=6.5; // 家事1件の高さ
+
+    for(let mi=0;mi<pdfMembers.length;mi++){
+      const mem=pdfMembers[mi];
+      const cx=colXs[mi];
+
+      // ページが足りなければ改ページ
+      if(mi>0&&mi%colCount===0)y+=4;
+
+      // メンバーヘッダー
+      setFill(mem.color);pdf.roundedRect(cx,y,colW2,hdrH,3,3,'F');
+      await jpText(`${mem.avatar} ${mem.name}`,cx+colW2/2,y+2,12,'#ffffff','center');
+      let ry=y+hdrH+2;
+
+      for(let d=1;d<=lastDate;d++){
+        const dayChores=memberDays[mi][d];if(!dayChores||!dayChores.length)continue;
+        const dow=(firstDay+d-1)%7;
+        const neededH=itemH*dayChores.length+rowH;
+        // ページオーバー
+        if(ry+neededH>H-M){
+          pdf.addPage();ry=M;
+          setFill(mem.color);pdf.roundedRect(cx,ry,colW2,8,3,3,'F');
+          await jpText(`${mem.avatar} ${mem.name}（続き）`,cx+colW2/2,ry+1.5,10,'#ffffff','center');
+          ry+=10;
+        }
+        // 日付行
+        const dayLabel=`${d}日（${DAYS_JA[dow]}）`;
+        const dayColor=dow===0?'#e05070':dow===6?'#5aadd4':'#9a7d8e';
+        setFillAlpha(mem.color,0.08);pdf.rect(cx,ry,colW2,rowH,'F');
+        await jpText(dayLabel,cx+3,ry+1.5,10,dayColor);
+        ry+=rowH;
+        // 家事アイテム
+        for(const c of dayChores){
+          setFillAlpha(mem.color,0.18);pdf.roundedRect(cx+4,ry,colW2-8,itemH,1.5,1.5,'F');
+          await jpText(`${c.icon||'✨'}${c.name}`,cx+7,ry+0.8,10,mem.color);
+          ry+=itemH+1;
+        }
+        ry+=2;
+      }
+    }
+
+    pdf.save(`おうち分担_${pdfLabel}_リスト.pdf`);showToast('✅ PDF生成完了！');
+  }catch(e){console.error(e);showToast('❌ PDF生成に失敗しました');}
+  document.getElementById('pdfLoading').classList.remove('show');
 }
 
 /* ===== PDF（jsPDF + Canvas - 修正版）===== */
@@ -672,37 +907,48 @@ async function generatePDF(histIdx){
     };
 
     // ===== ヘッダー =====
-    setFill('#fde8f0');pdf.setLineWidth(0);pdf.rect(M,y,CW,12,'F');
-    await jpText(`🏠 おうち分担　${pdfLabel}`,M+4,y+2,16,'#e8789a');
-    // 凡例（右側）
-    let lx=M+CW-pdfMembers.length*56;
+    const hdrH=14;
+    setFill('#fde8f0');pdf.setLineWidth(0);pdf.rect(M,y,CW,hdrH,'F');
+    // タイトル（縦中央）
+    await jpText(`🏠 おうち分担　${pdfLabel}`,M+4,y+(hdrH-7)/2,16,'#e8789a');
+    // 凡例（右側・縦中央揃え）
+    const legendItemW=60;
+    let lx=M+CW-pdfMembers.length*legendItemW;
     for(const mem of pdfMembers){
-      setFill(mem.color);pdf.circle(lx+3,y+6,3,'F');
-      await jpText(`${mem.avatar} ${mem.name}`,lx+8,y+2,11,mem.color);
-      lx+=56;
+      const circleY=y+hdrH/2; // 縦中央
+      setFill(mem.color);pdf.circle(lx+4,circleY,3.5,'F');
+      // テキストも縦中央（circle中心から上下にずらす）
+      await jpText(`${mem.avatar} ${mem.name}`,lx+10,y+(hdrH-6)/2,13,mem.color);
+      lx+=legendItemW;
     }
-    y+=15;
+    y+=hdrH+3;
 
     // ===== 家事回数サマリー =====
     const counts=pdfChores.map(()=>Array(pdfMembers.length).fill(0));
     pdfResult.forEach(r=>{if(counts[r.choreIdx])counts[r.choreIdx][r.memberIdx]++;});
-    const cols=4,summaryRowH=9,summaryRows=Math.ceil(pdfChores.length/cols);
-    setFill('#fef0f5');pdf.rect(M,y,CW,summaryRowH*summaryRows+7,'F');
-    await jpText('📊 家事別担当回数',M+2,y+1.5,9,'#9a7d8e');y+=7;
+    const cols=4,summaryRowH=10,summaryRows=Math.ceil(pdfChores.length/cols);
+    const summaryTotalH=summaryRowH*summaryRows+9;
+    setFill('#fef0f5');pdf.rect(M,y,CW,summaryTotalH,'F');
+    await jpText('📊 家事別担当回数',M+2,y+2,9,'#9a7d8e');y+=8;
     const colW=CW/cols;
+    // バッジ幅を家事名と回数バッジで固定レイアウト
+    const choreNameW=colW*0.46; // 家事名エリア幅
+    const badgeW=22;            // 1バッジ幅
     for(let ci=0;ci<pdfChores.length;ci++){
       const c=pdfChores[ci];const col=ci%cols;const rowOff=Math.floor(ci/cols);
       const cx=M+col*colW,cy=y+rowOff*summaryRowH;
-      await jpText(`${c.icon||'✨'}${c.name}`,cx+1,cy+0.5,8,'#3d2c38');
-      let bx=cx+colW*0.52;
+      // 家事名（左寄せ）
+      await jpText(`${c.icon||'✨'}${c.name}`,cx+1,cy+1,8,'#3d2c38');
+      // バッジ（家事名エリアの右隣から）
+      let bx=cx+choreNameW;
       for(let mi=0;mi<pdfMembers.length;mi++){
         const mem=pdfMembers[mi];
-        setFillAlpha(mem.color,0.2);pdf.roundedRect(bx,cy,20,6.5,1.2,1.2,'F');
-        await jpText(`${mem.avatar}${counts[ci][mi]}回`,bx+1,cy+0.8,7,mem.color);
-        bx+=22;
+        setFillAlpha(mem.color,0.2);pdf.roundedRect(bx,cy+0.5,badgeW,7,1.5,1.5,'F');
+        await jpText(`${mem.avatar}${counts[ci][mi]}回`,bx+1.5,cy+1.2,7,mem.color);
+        bx+=badgeW+2;
       }
     }
-    y+=summaryRowH*summaryRows+8;
+    y+=summaryRowH*summaryRows+9;
 
     // ===== カレンダー =====
     const firstDay=new Date(py,pm-1,1).getDay(),lastDate=new Date(py,pm,0).getDate();
@@ -795,16 +1041,24 @@ function renderHistory(){
         <div class="chore-summary" id="hsummary-${i}"></div>
         <div class="history-cal-wrap" id="hcal-${i}"></div>
         <div class="history-action-row" style="margin-top:10px">
-          <button class="history-action-btn" onclick="generatePDF(${i})">🖨️ PDF出力</button>
+          <button class="history-action-btn" onclick="openPdfModal(${i})">🖨️ PDF出力</button>
           <button class="history-del-btn" onclick="deleteHistory(${i})">🗑 削除</button>
         </div>
       </div>`;
     // カレンダーと回数は展開時に遅延生成
     card.querySelector('.history-card-hdr').addEventListener('click',()=>{
       const calEl=document.getElementById(`hcal-${i}`);
+      const listEl=document.getElementById(`hlist-${i}`);
       const sumEl=document.getElementById(`hsummary-${i}`);
       if(calEl&&!calEl.hasChildNodes()){
-        calEl.appendChild(buildCalendarTable(h.result,hC,hM,h.month,hU));
+        // PC：カレンダー
+        const calWrapEl=document.createElement('div');calWrapEl.className='cal-view history-cal-wrap';
+        calWrapEl.appendChild(buildCalendarTable(h.result,hC,hM,h.month,hU));
+        calEl.appendChild(calWrapEl);
+        // スマホ：リスト
+        const listWrapEl=document.createElement('div');listWrapEl.className='list-view';
+        buildListView(h.result,hC,hM,h.month,hU,listWrapEl);
+        calEl.appendChild(listWrapEl);
         buildChoreSummary(h.result,hC,hM,sumEl);
       }
     });
