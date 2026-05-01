@@ -507,51 +507,100 @@ function assign(){
 }
 
 /* ===== CORE LOGIC =====
-  日内均等を最優先、月間均等を次点で担保する。
-  全スロットを日付順に並べ、同じ日のスロットをまとめて処理。
-  スコア = dayLoad[i]*10000 + totalLoad[i]
-  → 今日の担当数が少ない人を最優先で選ぶ（日内均等）
-  → 同点なら月間累計が少ない人を選ぶ（月間均等）
+  Step1: 各家事ごとに独立して月間均等振り分け（差1以内を保証）
+  Step2: 同じ日に1人へ集中している場合、月間均等を崩さない範囲で入れ替え
 */
 function generateAssignment(chores,members,firstDay,lastDate,ud){
   const n=members.length;
-
-  // 全スロット生成（日付・家事インデックス）
-  const allSlots=[];
-  chores.forEach((chore,ci)=>{
-    pickDatesForChore(chore,firstDay,lastDate,ud).forEach(d=>allSlots.push({date:d,choreIdx:ci}));
-  });
-
-  // 日付でグループ化し、各日の中でシャッフル（ランダム性）
-  const byDate={};
-  allSlots.forEach(s=>{if(!byDate[s.date])byDate[s.date]=[];byDate[s.date].push(s);});
-
   const result=[];
-  const totalLoad=Array(n).fill(0); // 月間累計
 
-  Object.keys(byDate).map(Number).sort((a,b)=>a-b).forEach(d=>{
-    const slots=[...byDate[d]].sort(()=>Math.random()-.5);
-    const dayLoad=Array(n).fill(0); // 今日の担当数（リセット）
+  // Step1: 家事ごとに独立して均等振り分け
+  chores.forEach((chore,ci)=>{
+    const dates=pickDatesForChore(chore,firstDay,lastDate,ud);
+    if(!dates.length)return;
 
-    slots.forEach(slot=>{
-      // スコア最小のメンバーを選ぶ（日内均等を最優先）
-      let bestIdx=-1,bestScore=Infinity;
+    // シャッフルでランダム性
+    const shuffled=[...dates].sort(()=>Math.random()-.5);
+    const total=shuffled.length;
+    const base=Math.floor(total/n);
+    const extra=total%n;
+
+    // 各メンバーの割り当て枠を計算
+    // 端数はランダムに誰かが1つ多く持つ
+    const quota=Array(n).fill(base);
+    if(extra>0){
+      // 端数担当をランダムに選ぶ
+      const extraIdx=Math.floor(Math.random()*n);
+      quota[extraIdx]+=extra;
+    }
+
+    // 不可日を考慮しながら枠に従って割り当て
+    const memberLoad=Array(n).fill(0);
+    shuffled.forEach(date=>{
+      // 不可でないメンバーの中で、まだ枠が余っている人を優先
+      let bestIdx=-1,bestPriority=-Infinity;
       for(let i=0;i<n;i++){
-        if((ud[d]||[]).includes(i))continue; // この日は不可
-        const score=dayLoad[i]*10000+totalLoad[i];
-        if(score<bestScore){bestScore=score;bestIdx=i;}
+        const isUnavail=(ud[date]||[]).includes(i);
+        if(isUnavail)continue;
+        const remaining=quota[i]-memberLoad[i];
+        const priority=remaining*1000 - memberLoad[i]; // 残り枠多い人優先、同じなら担当少ない人優先
+        if(priority>bestPriority){bestPriority=priority;bestIdx=i;}
       }
-      if(bestIdx===-1){ // 全員不可なら制限なしで選ぶ
-        for(let i=0;i<n;i++){
-          const score=dayLoad[i]*10000+totalLoad[i];
-          if(score<bestScore){bestScore=score;bestIdx=i;}
-        }
+      if(bestIdx===-1){
+        // 全員不可なら枠関係なく最少担当者
+        let minLoad=Infinity;
+        for(let i=0;i<n;i++){if(memberLoad[i]<minLoad){minLoad=memberLoad[i];bestIdx=i;}}
       }
-      result.push({...slot,memberIdx:bestIdx});
-      dayLoad[bestIdx]++;
-      totalLoad[bestIdx]++;
+      result.push({date,choreIdx:ci,memberIdx:bestIdx});
+      memberLoad[bestIdx]++;
     });
   });
+
+  // Step2: 日内均等化（月間均等を崩さない入れ替え）
+  // 同じ日のスロットを集め、1人に偏っていたら別の家事の担当者と入れ替えを試みる
+  const byDate={};
+  result.forEach((r,idx)=>{if(!byDate[r.date])byDate[r.date]=[];byDate[r.date].push(idx);});
+
+  Object.keys(byDate).map(Number).sort((a,b)=>a-b).forEach(date=>{
+    const idxs=byDate[date];
+    if(idxs.length<2)return;
+
+    // 各メンバーの担当数を集計
+    const dayCount=()=>{
+      const c=Array(n).fill(0);
+      idxs.forEach(i=>c[result[i].memberIdx]++);
+      return c;
+    };
+
+    // 最大10回試みて日内を均等化
+    for(let attempt=0;attempt<10;attempt++){
+      const cnt=dayCount();
+      const maxCnt=Math.max(...cnt),minCnt=Math.min(...cnt);
+      if(maxCnt-minCnt<=1)break; // 差が1以内なら終了
+
+      const maxMember=cnt.indexOf(maxCnt);
+      const minMember=cnt.indexOf(minCnt);
+
+      // maxMemberの家事の中からminMemberと入れ替えできるものを探す
+      // 入れ替え条件：月間均等が壊れないこと（その家事でmaxMemberとminMemberの差が2以上ある場合のみ）
+      let swapped=false;
+      for(const i of idxs){
+        if(result[i].memberIdx!==maxMember)continue;
+        const ci=result[i].choreIdx;
+        // この家事でmaxMemberとminMemberの月間カウントを確認
+        const choreCountMax=result.filter(r=>r.choreIdx===ci&&r.memberIdx===maxMember).length;
+        const choreCountMin=result.filter(r=>r.choreIdx===ci&&r.memberIdx===minMember).length;
+        // 入れ替えても月間均等が保たれる（差が2以上あるとき入れ替えで差が1縮まる）
+        if(choreCountMax-choreCountMin>=1&&!(ud[date]||[]).includes(minMember)){
+          result[i].memberIdx=minMember;
+          swapped=true;
+          break;
+        }
+      }
+      if(!swapped)break;
+    }
+  });
+
   return result;
 }
 
@@ -986,29 +1035,38 @@ async function generatePDF(histIdx){
     // ===== 家事回数サマリー =====
     const counts=pdfChores.map(()=>Array(pdfMembers.length).fill(0));
     pdfResult.forEach(r=>{if(counts[r.choreIdx])counts[r.choreIdx][r.memberIdx]++;});
-    const cols=4,summaryRowH=10,summaryRows=Math.ceil(pdfChores.length/cols);
+    // 列数: 家事が8以下なら2列、9以上なら4列
+    const cols=pdfChores.length<=8?2:4;
+    const summaryRowH=10,summaryRows=Math.ceil(pdfChores.length/cols);
     const summaryTotalH=summaryRowH*summaryRows+9;
     setFill('#fef0f5');pdf.rect(M,y,CW,summaryTotalH,'F');
     await jpText('📊 家事別担当回数',M+2,y+2,9,'#9a7d8e');y+=8;
     const colW=CW/cols;
-    // バッジ幅を家事名と回数バッジで固定レイアウト
-    const choreNameW=colW*0.46; // 家事名エリア幅
-    const badgeW=22;            // 1バッジ幅
+    // 各列内のレイアウトを固定座標で管理
+    const badgeW=21; // バッジ1個の幅
+    const badgeTotalW=pdfMembers.length*(badgeW+2); // バッジエリア合計幅
+    const nameAreaW=colW-badgeTotalW-4; // 家事名エリア幅（残り）
     for(let ci=0;ci<pdfChores.length;ci++){
-      const c=pdfChores[ci];const col=ci%cols;const rowOff=Math.floor(ci/cols);
-      const cx=M+col*colW,cy=y+rowOff*summaryRowH;
-      // 家事名（左寄せ）
-      await jpText(`${c.icon||'✨'}${c.name}`,cx+1,cy+1,8,'#3d2c38');
-      // バッジ（家事名エリアの右隣から）
-      let bx=cx+choreNameW;
+      const c=pdfChores[ci];
+      const col=ci%cols;
+      const rowOff=Math.floor(ci/cols);
+      const cx=M+col*colW; // このセルの左端X
+      const cy=y+rowOff*summaryRowH;
+      // 区切り線
+      setDraw('#f2d6e4');pdf.setLineWidth(0.2);
+      if(rowOff>0)pdf.line(cx,cy,cx+colW,cy);
+      // 家事名（左から固定幅）
+      await jpText(`${c.icon||'✨'}${c.name}`,cx+2,cy+2,8,'#3d2c38');
+      // バッジ（右端から逆算して固定位置）
+      const bxStart=cx+colW-badgeTotalW-1;
       for(let mi=0;mi<pdfMembers.length;mi++){
         const mem=pdfMembers[mi];
-        setFillAlpha(mem.color,0.2);pdf.roundedRect(bx,cy+0.5,badgeW,7,1.5,1.5,'F');
-        await jpText(`${mem.avatar}${counts[ci][mi]}回`,bx+1.5,cy+1.2,7,mem.color);
-        bx+=badgeW+2;
+        const bx=bxStart+mi*(badgeW+2);
+        setFillAlpha(mem.color,0.2);pdf.roundedRect(bx,cy+1.5,badgeW,6.5,1.5,1.5,'F');
+        await jpText(`${mem.avatar}${counts[ci][mi]}回`,bx+badgeW/2,cy+2.2,7,mem.color,'center');
       }
     }
-    y+=summaryRowH*summaryRows+9;
+    y+=summaryTotalH;
 
     // ===== カレンダー =====
     const firstDay=new Date(py,pm-1,1).getDay(),lastDate=new Date(py,pm,0).getDate();
